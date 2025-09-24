@@ -1,6 +1,8 @@
 from enum import Enum
 from typing import List, Dict, Any
 
+import re, json
+
 from llm_interface import VllmLLM
 from .tools.base import BaseTool
 
@@ -56,7 +58,6 @@ class Message:
 
 class Agent:
     """ReAct 风格、支持函数调用的简易 Agent。"""
-
     def __init__(self, tools: list[BaseTool], llm: VllmLLM, max_rounds: int = 5):
         self.tools = {t.name: t for t in tools}
         self.llm = llm
@@ -64,31 +65,51 @@ class Agent:
         self.conversation: list[Message] = []
 
     # --------- 公共接口 ---------
+    def _extract_tool_calls(self, content: str) -> list[dict]:
+        """从 LLM 输出的 <action>...</action> 标签中解析工具调用信息。"""
+        if not content:
+            return []
+        match = re.search(r"<action>\s*({[\\s\\S]*?})\s*</action>", content)
+        if not match:
+            return []
+        action_str = match.group(1).strip()
+        if not action_str:
+            return []
+        try:
+            # action_str 期望为 JSON；允许单个或数组
+            data = json.loads(action_str)
+            if isinstance(data, dict):
+                return [data]
+            if isinstance(data, list):
+                return data
+            # 其他类型不支持
+        except json.JSONDecodeError:
+            # 解析失败时，直接返回字符串形式，交由工具自行处理
+            return [{"name": "unknown", "arguments": {"raw": action_str}}]
+        return []
+
+    # 修改 run 方法中的逻辑
     def run(self, user_input: str) -> str:
         """整体执行流程：think/act 交替，直到 LLM 不再要求工具调用或达到迭代上限。"""
-        self.conversation.append(Message.user("<question>"+user_input+"</question>"))
+        self.conversation.append(Message.user(f"<question>{user_input}</question>"))
 
         for _ in range(self.max_rounds):
             llm_resp = self._think()
-            print("llm_think_resp:",llm_resp)
+            # print("llm_think_resp:", llm_resp)
 
-            # 若包含工具调用
-            tool_calls = llm_resp.get("tool_calls")
-            print("tool_calls:",tool_calls)
+            content = llm_resp.get("content", "")
+            tool_calls = self._extract_tool_calls(content)
+            # print("tool_calls:", tool_calls)
 
             if tool_calls:
-                self.conversation.append(
-                    Message.assistant(llm_resp.get("content"), tool_calls)
-                )
+                # 将原始内容和工具调用结果一起存入对话
+                self.conversation.append(Message.assistant(content, tool_calls))
                 self._act(tool_calls)
-                print("self.conversation:",self.conversation)
-                # 继续下一轮
-                continue
+                continue  # 继续下一轮思考
 
-            if "<final_answer>" in llm_resp.get("content"):
-                self.conversation.append(Message.assistant(llm_resp.get("content")))
-                return llm_resp.get("content", "")
-
+            if "<final_answer>" in content:
+                self.conversation.append(Message.assistant(content))
+                return content
 
         return "达到最大迭代次数，任务可能未完成"
 
@@ -130,7 +151,7 @@ class Agent:
         print("tools_info:",tools_info,"\n")
 
         response = self.llm.chat(messages, tools_info)
-        print("response:",response)
+        print("think_response:",response)
         return response
 
     def _act(self, tool_calls: list[dict]):
