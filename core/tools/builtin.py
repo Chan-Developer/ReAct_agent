@@ -11,6 +11,7 @@ __all__ = [
     "Calculator",
     "Search",
     "FileOperations",
+    "AddFile",
 ]
 
 
@@ -72,28 +73,54 @@ class Search(BaseTool):
         return self._mock_results.get(query.lower(), f"未找到关于 '{query}' 的信息")
 
 
-class FileOperations(BaseTool):
-    """文件读写演示工具。"""
+# ---------------------------------------------------------------------------
+# 新增：AddFile 工具 – 在当前工作目录创建文件并写入内容
+# ---------------------------------------------------------------------------
+
+class AddFile(BaseTool):
+    """在当前目录创建文件并写入内容。"""
 
     def __init__(self) -> None:
         super().__init__(
-            name="fileOperations",
-            description="文件操作（仅演示，不执行真实 IO）",
+            name="addFile",
+            description="在当前工作目录创建文件并写入内容",
             parameters={
                 "type": "object",
                 "properties": {
-                    "operation": {
+                    "filename": {
                         "type": "string",
-                        "description": "操作类型：read / write",
+                        "description": "要创建的文件名（可包含相对路径）",
                     },
-                    "filepath": {
+                    "content": {
                         "type": "string",
-                        "description": "文件路径",
+                        "description": "要写入文件的内容",
                     },
                 },
-                "required": ["operation", "filepath"],
+                "required": ["filename", "content"],
             },
         )
 
-    def execute(self, operation: str, filepath: str):  # type: ignore[override]
-        return f"模拟 {operation} 操作文件：{filepath}"
+    def execute(self, filename: str, content: str):  # type: ignore[override]
+        try:
+            with open(filename, "w", encoding="utf-8") as f:
+                f.write(content)
+            return f"✅ 已创建文件 {filename}，写入 {len(content)} 字符。"
+        except Exception as exc:  # pragma: no cover
+            return f"❌ 创建文件失败: {exc}"
+
+class read_file(BaseTool):
+    """读取文件内容。"""
+    def __init__(self) -> None:
+        super().__init__(
+            name="read_file",
+            description="读取文件内容",
+        )
+    def execute(self, filename: str):  # type: ignore[override]
+        with open(filename, "r", encoding="utf-8") as f:
+            return f.read()
+
+if __name__ == "__main__":
+    # addFile = AddFile()
+    # result = addFile.execute("test.txt", "Hello, world!")
+    result = eval("7*99+234-89")
+    print(result)

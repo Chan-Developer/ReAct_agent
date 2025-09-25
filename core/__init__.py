@@ -1,5 +1,5 @@
 from .agent import Agent, Role, Message
-from .tools.builtin import Calculator, Search, FileOperations
+from .tools.builtin import Calculator, Search, AddFile
 
 __all__ = [
     "Agent",
@@ -8,4 +8,5 @@ __all__ = [
     "Calculator",
     "Search",
     "FileOperations",
+    "AddFile",
 ]

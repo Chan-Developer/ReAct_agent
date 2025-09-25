@@ -29,9 +29,6 @@ class VllmLLM:
             "max_tokens": max_tokens,
         }
 
-        if tools_info is not None:
-            payload["functions"] = tools_info
-
         url = f"{self.base_url}/chat/completions"
         try:
             resp = requests.post(url, json=payload, timeout=self.timeout)
@@ -51,3 +48,5 @@ if __name__ == "__main__":
         {"role": "user", "content": "Hello, how are you?"}
     ]
     print(llm.chat(messages))
+
+

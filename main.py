@@ -11,12 +11,12 @@ from __future__ import annotations
 import argparse
 
 from core.agent import Agent
-from core.tools.builtin import Calculator, Search, FileOperations
+from core.tools.builtin import Calculator, Search, AddFile
 from llm_interface import VllmLLM
 
 
 def build_agent(max_steps: int) -> Agent:
-    tools = [Calculator(), Search(), FileOperations()]
+    tools = [Calculator(), Search(), AddFile()]
     llm = VllmLLM()
     return Agent(tools, llm, max_steps)
 
