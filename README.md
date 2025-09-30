@@ -1,6 +1,6 @@
 # ReAct Agent 示例项目
 
-> 基于 **ReAct + OpenAI Function Calling** 思想，演示一个支持「思考-行动」循环、可动态调用工具的轻量级 Agent。
+> 基于 **ReAct (Reasoning and Acting)** 框架的智能代理系统，通过「思考-行动-观察」循环模式，结合自然语言解析实现工具调用的轻量级 Agent。
 
 ---
 

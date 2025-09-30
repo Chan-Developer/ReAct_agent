@@ -209,7 +209,6 @@ class Agent:
     # --------- 内部方法 ---------
     def _think(self) -> dict:
         
-         
         messages = []
         messages.append({"role": "system", "content": self.system_prompt})
         messages.extend([m.to_dict() for m in self.conversation])
