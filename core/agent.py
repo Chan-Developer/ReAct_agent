@@ -1,15 +1,26 @@
 from enum import Enum
-from typing import List, Dict, Any
-
-import re, json
+from typing import List, Dict, Any, Optional
+import logging
+import re
+import json
 
 from llm_interface import VllmLLM
 from .tools.base import BaseTool
+from .tool_registry import ToolRegistry
 from .prompt import react_system_prompt_template
+
 __all__ = ["Role", "Message", "Agent"]
+
 import os
 from string import Template
 import platform
+
+# 配置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 class Role(str, Enum):
     USER = "user"
@@ -24,19 +35,29 @@ class Message:
     def __init__(self, role: Role, content: str | None = None):
         self.role = role
         self.content = content
-        self.tool_calls: list[dict] = []
-        self.name: str | None = None  # tool message 专用
+        self.tool_calls: List[dict] = []
+        self.name: Optional[str] = None  # tool message 专用
+        self.tool_call_id: Optional[str] = None  # tool message 专用
 
     # ---------- 工具方法 ----------
     def to_dict(self) -> Dict[str, Any]:
         data: Dict[str, Any] = {
             "role": self.role.value,
-            "content": self.content,
         }
+        
+        # content 可以为 None（当有 tool_calls 时）
+        if self.content is not None:
+            data["content"] = self.content
+        
         if self.tool_calls:
             data["tool_calls"] = self.tool_calls
+            
         if self.name:
             data["name"] = self.name
+            
+        if self.tool_call_id:
+            data["tool_call_id"] = self.tool_call_id
+            
         return data
 
     # ---------- 工厂方法 ----------
@@ -45,46 +66,117 @@ class Message:
         return cls(Role.USER, content)
 
     @classmethod
-    def assistant(cls, content: str | None, tool_calls: list[dict] | None = None) -> "Message":
+    def assistant(cls, content: str | None, tool_calls: List[dict] | None = None) -> "Message":
         msg = cls(Role.ASSISTANT, content)
         if tool_calls:
             msg.tool_calls = tool_calls
         return msg
 
     @classmethod
-    def tool(cls, name: str, content: str) -> "Message":
+    def tool(cls, name: str, content: str, tool_call_id: str | None = None) -> "Message":
         msg = cls(Role.TOOL, content)
         msg.name = name
+        if tool_call_id:
+            msg.tool_call_id = tool_call_id
         return msg
 
 
 class Agent:
-    """ReAct 风格、支持函数调用的简易 Agent。"""
-    def __init__(self, tools: list[BaseTool], llm: VllmLLM, max_rounds: int = 5, project_directory: str = "."):
-        self.tools = {t.name: t for t in tools}
-        self.tools_info = [t.as_function_spec() for t in self.tools.values()]
+    """ReAct 风格、支持函数调用的简易 Agent。
+    
+    支持两种初始化方式:
+    1. 直接传入工具列表: Agent(tools=[tool1, tool2], llm=llm)
+    2. 使用工具注册器: Agent(tool_registry=registry, llm=llm)
+    """
+    def __init__(
+        self, 
+        llm: VllmLLM,
+        tools: Optional[List[BaseTool]] = None,
+        tool_registry: Optional[ToolRegistry] = None,
+        max_rounds: int = 5, 
+        project_directory: str = ".",
+        use_native_function_calling: bool = True
+    ):
+        """
+        初始化 Agent。
+        
+        参数:
+            llm: LLM 接口实例
+            tools: 工具列表（可选，与 tool_registry 二选一）
+            tool_registry: 工具注册器（可选，与 tools 二选一）
+            max_rounds: 最大思考轮数
+            project_directory: 项目目录
+            use_native_function_calling: 是否使用原生 Function Calling（推荐）
+        """
         self.llm = llm
         self.max_rounds = max_rounds
-        self.conversation: list[Message] = []
-        self.system_prompt = None
         self.project_directory = project_directory
+        self.use_native_function_calling = use_native_function_calling
+        
+        # 工具管理
+        if tool_registry is not None:
+            self.tool_registry = tool_registry
+        elif tools is not None:
+            self.tool_registry = ToolRegistry()
+            self.tool_registry.register_tools(tools)
+        else:
+            # 如果都没提供，创建空的注册器
+            self.tool_registry = ToolRegistry()
+            logger.warning("未提供工具，Agent 将在无工具模式下运行")
+        
+        # 对话历史
+        self.conversation: List[Message] = []
+        self.system_prompt = None
+        
+        logger.info(f"Agent 初始化完成，已注册 {len(self.tool_registry)} 个工具: {self.tool_registry}")
 
-    # --------- 公共接口 ---------
-    def _extract_tool_calls(self, content: str) -> list[dict]:
-        """从 LLM 输出的 <action>...</action> 标签中解析工具调用信息。"""
+    # --------- 工具调用解析 ---------
+    def _extract_tool_calls_from_native(self, llm_response: dict) -> Optional[List[dict]]:
+        """从 LLM 原生返回的 tool_calls 中提取工具调用信息（推荐方式）。"""
+        tool_calls = llm_response.get("tool_calls")
+        if not tool_calls:
+            return None
+        
+        parsed_calls = []
+        for tc in tool_calls:
+            try:
+                func_info = tc.get("function", {})
+                name = func_info.get("name")
+                arguments_str = func_info.get("arguments", "{}")
+                
+                # 解析 JSON 参数
+                if isinstance(arguments_str, str):
+                    arguments = json.loads(arguments_str)
+                else:
+                    arguments = arguments_str
+                
+                parsed_calls.append({
+                    "id": tc.get("id"),
+                    "name": name,
+                    "arguments": arguments
+                })
+                logger.info(f"解析到工具调用: {name}({arguments})")
+            except json.JSONDecodeError as e:
+                logger.error(f"工具调用参数解析失败: {e}, 原始数据: {tc}")
+                continue
+        
+        return parsed_calls if parsed_calls else None
+    
+    def _extract_tool_calls_from_xml(self, content: str) -> Optional[List[dict]]:
+        """从 LLM 输出的 <action>...</action> 标签中解析工具调用（兼容旧格式）。"""
         if not content:
-            return []
+            return None
         
         # 匹配 <action>function_name(arg1, arg2)</action> 格式
         match = re.search(r"<action>\s*([^<]+)\s*</action>", content)
         if not match:
-            return []
+            return None
         
         action_str = match.group(1).strip()
-        print("action_str(待调用工具):", action_str, "\n")
+        logger.info(f"从 XML 解析工具调用: {action_str}")
         
         if not action_str:
-            return []
+            return None
             
         # 尝试解析函数调用格式：function_name(arg1="value1", arg2="value2")
         func_match = re.match(r'(\w+)\s*\((.*)\)$', action_str)
@@ -92,10 +184,9 @@ class Agent:
             func_name = func_match.group(1)
             args_str = func_match.group(2).strip()
             
-            # 简单解析参数（仅支持字符串参数）
+            # 简单解析参数
             arguments = {}
             if args_str:
-                # 分割参数，处理引号内的逗号
                 import shlex
                 try:
                     args_list = shlex.split(args_str.replace('=', ' '))
@@ -104,36 +195,12 @@ class Agent:
                             key = args_list[i]
                             value = args_list[i + 1]
                             arguments[key] = value
-                        else:
-                            # 位置参数，根据实际工具名称映射参数
-                            if func_name == "calculator" or func_name == "calculate_expression":
-                                arguments["expression"] = args_list[i]
-                            elif func_name == "search":
-                                arguments["query"] = args_list[i]
-                            elif func_name == "addFile":
-                                if i == 0:
-                                    arguments["filename"] = args_list[i]
-                                elif i == 2:
-                                    arguments["content"] = args_list[i]
-                            else:
-                                arguments[f"arg_{i//2}"] = args_list[i]
-                except Exception:
-                    # 简单情况：只有一个参数值，根据工具类型推断参数名
-                    value = args_str.strip('"\'')
-                    if func_name == "calculator" or func_name == "calculate_expression":
-                        arguments["expression"] = value
-                    elif func_name == "search":
-                        arguments["query"] = value
-                    else:
-                        arguments["content"] = value
+                except Exception as e:
+                    logger.warning(f"参数解析失败: {e}，使用原始字符串")
+                    arguments["raw"] = args_str
             
-            # 规范化工具名称
-            if func_name == "calculate_expression":
-                func_name = "calculator"
-                    
             return [{"name": func_name, "arguments": arguments}]
         
-        # 如果无法解析，返回原始字符串
         return [{"name": "unknown", "arguments": {"raw": action_str}}]
 
     def get_operating_system_name(self):
@@ -147,17 +214,23 @@ class Agent:
 
     def render_system_prompt(self, system_prompt_template: str) -> str:
         """渲染系统提示模板，替换变量"""
-        # 格式化工具列表为可读的字符串，包含实际的函数调用格式
+        # 从工具注册器获取工具列表
+        tools = self.tool_registry.get_all_tools()
+        
+        # 格式化工具列表为可读的字符串
         tool_descriptions = []
-        for tool in self.tools_info:
-            # 为每个工具生成详细的调用格式说明
-            params = tool.get('parameters', {}).get('properties', {})
+        for tool in tools:
+            spec = tool.as_function_spec()
+            params = spec.get('parameters', {}).get('properties', {})
             param_list = []
             for param_name, param_info in params.items():
-                param_list.append(f"{param_name}=\"value\"")
-            param_str = ", ".join(param_list)
-            tool_descriptions.append(f"- {tool['name']}({param_str}): {tool['description']}")
-        tool_list = "\n".join(tool_descriptions)
+                param_desc = param_info.get('description', '')
+                param_list.append(f"{param_name}: {param_desc}")
+            param_str = ", ".join(param_list) if param_list else "无参数"
+            tool_descriptions.append(
+                f"- {spec['name']}: {spec['description']}\n  参数: {param_str}"
+            )
+        tool_list = "\n".join(tool_descriptions) if tool_descriptions else "无可用工具"
         
         try:
             file_list = ", ".join(
@@ -165,7 +238,8 @@ class Agent:
                 for f in os.listdir(self.project_directory)
                 if os.path.isfile(os.path.join(self.project_directory, f))
             )
-        except Exception:
+        except Exception as e:
+            logger.warning(f"获取文件列表失败: {e}")
             file_list = "无法获取文件列表"
             
         return Template(system_prompt_template).substitute(
@@ -173,65 +247,134 @@ class Agent:
             tool_list=tool_list,
             file_list=file_list
         )
-    # 修改 run 方法中的逻辑
+    # --------- 主运行流程 ---------
     def run(self, user_input: str) -> str:
-        """整体执行流程：think/act 交替，直到 LLM 不再要求工具调用或达到迭代上限。"""
-        self.conversation.append(Message.user(f"<question>{user_input}</question>"))
+        """
+        整体执行流程：think/act 交替，直到 LLM 不再要求工具调用或达到迭代上限。
+        
+        参数:
+            user_input: 用户输入的问题
+            
+        返回:
+            str: Agent 的最终回答
+        """
+        logger.info(f"开始处理用户输入: {user_input}")
+        
+        # 添加用户消息
+        if self.use_native_function_calling:
+            self.conversation.append(Message.user(user_input))
+        else:
+            # XML 格式兼容模式
+            self.conversation.append(Message.user(f"<question>{user_input}</question>"))
+        
+        # 渲染系统提示
         system_prompt = self.render_system_prompt(react_system_prompt_template)
         self.system_prompt = system_prompt
+        logger.debug(f"System Prompt: {system_prompt[:200]}...")
 
-        # print("-----","渲染系统提示模板","-----")
-        # print("system_prompt:",system_prompt,"\n")
-
-        for _ in range(self.max_rounds):
-            print("------","执行think","------","\n")
-            llm_resp = self._think()
-            print("------","think完成","------","\n")
+        # 迭代思考-行动循环
+        for round_num in range(1, self.max_rounds + 1):
+            logger.info(f"====== 第 {round_num}/{self.max_rounds} 轮 ======")
+            
+            try:
+                llm_resp = self._think()
+            except Exception as e:
+                logger.error(f"LLM 调用失败: {e}", exc_info=True)
+                return f"抱歉，处理过程中出现错误: {e}"
 
             content = llm_resp.get("content", "")
-            print("content(LLM响应):",content,"\n")
-            tool_calls = self._extract_tool_calls(content)
+            logger.info(f"LLM 响应: {content[:200]}...")
+            
+            # 尝试提取工具调用
+            if self.use_native_function_calling:
+                tool_calls = self._extract_tool_calls_from_native(llm_resp)
+            else:
+                tool_calls = self._extract_tool_calls_from_xml(content)
 
+            # 如果有工具调用，执行工具
             if tool_calls:
-                # 将原始内容存入对话（不包含tool_calls，因为格式不兼容OpenAI API）
-                self.conversation.append(Message.assistant(content))
-                print("------","执行act","------","\n")
+                # 保存 assistant 消息（包含 tool_calls）
+                assistant_msg = Message.assistant(content, tool_calls)
+                self.conversation.append(assistant_msg)
+                
+                logger.info(f"检测到 {len(tool_calls)} 个工具调用")
                 self._act(tool_calls)
-                print("------","act完成","------","\n")
                 continue  # 继续下一轮思考
 
-            if "<final_answer>" in content:
+            # 检查是否有最终答案
+            if "<final_answer>" in content or "final_answer" in content.lower():
                 self.conversation.append(Message.assistant(content))
+                logger.info("任务完成，返回最终答案")
                 return content
 
-        return "达到最大迭代次数，任务可能未完成"
+            # 如果没有工具调用也没有最终答案
+            # 在最后一轮或者模型给出了有意义的回答时，直接返回
+            self.conversation.append(Message.assistant(content))
+            
+            # 如果是最后一轮，返回当前内容
+            if round_num == self.max_rounds:
+                logger.info("达到最大轮数，返回当前回答")
+                return content
+            
+            # 如果模型给出了较长的回答（不是简单的思考），也可以返回
+            if not self.use_native_function_calling and len(content.strip()) > 20 and round_num > 1:
+                logger.info("检测到模型给出了直接回答")
+                return content
+
+        logger.warning("达到最大迭代次数，任务可能未完成")
+        return "达到最大迭代次数，任务可能未完成。请尝试简化问题或增加 max_rounds 参数。"
 
     # --------- 内部方法 ---------
     def _think(self) -> dict:
-        
+        """调用 LLM 进行思考。"""
         messages = []
         messages.append({"role": "system", "content": self.system_prompt})
         messages.extend([m.to_dict() for m in self.conversation])
 
-        response = self.llm.chat(messages)
-        print("think_response:",response)
-        return response
+        # 如果使用原生 Function Calling，传入工具信息
+        tools_info = None
+        if self.use_native_function_calling and len(self.tool_registry) > 0:
+            tools_info = self.tool_registry.get_tools_spec()
+            logger.debug(f"传入 {len(tools_info)} 个工具给 LLM")
 
-    def _act(self, tool_calls: list[dict]):
-        
+        try:
+            response = self.llm.chat(messages, tools_info=tools_info)
+            logger.debug(f"LLM 返回: {response}")
+            return response
+        except Exception as e:
+            logger.error(f"LLM 请求失败: {e}", exc_info=True)
+            raise
+
+    def _act(self, tool_calls: List[dict]):
+        """执行工具调用。"""
         for tc in tool_calls:
             name = tc["name"]
             args = tc.get("arguments", {})
-            tool = self.tools.get(name)
+            tool_call_id = tc.get("id")
+            
+            logger.info(f"执行工具: {name}, 参数: {args}")
+            
+            # 从注册器获取工具
+            tool = self.tool_registry.get_tool(name)
+            
             if tool is None:
-                result = f"未找到工具: {name}"
+                result = f"❌ 错误: 未找到工具 '{name}'。可用工具: {list(self.tool_registry._tools.keys())}"
+                logger.error(result)
             else:
                 try:
                     result = tool.execute(**args)
-                    print("tool_result:",result,"\n")
+                    logger.info(f"工具 {name} 执行成功: {result}")
+                except TypeError as e:
+                    result = f"❌ 参数错误: {e}。工具 '{name}' 需要的参数: {tool.parameters}"
+                    logger.error(result, exc_info=True)
                 except Exception as e:
-                    result = f"工具执行失败: {e}"
+                    result = f"❌ 工具执行失败: {type(e).__name__}: {e}"
+                    logger.error(result, exc_info=True)
 
             # 将工具结果写入对话历史
-            self.conversation.append(Message.tool(name, str(result)))
+            tool_msg = Message.tool(name, str(result))
+            if tool_call_id:
+                # 如果有 tool_call_id，添加到消息中（OpenAI 格式要求）
+                tool_msg.tool_call_id = tool_call_id
+            self.conversation.append(tool_msg)
 

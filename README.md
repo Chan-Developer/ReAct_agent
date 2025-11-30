@@ -6,11 +6,14 @@
 
 ## ✨ 功能特性
 
-1. **ReAct 思维链**：模型在 `<thought>` 中自我思考，在 `<action>` 中调用工具，在 `<observation>` 中接收反馈，循环迭代直至输出 `<final_answer>`。
-2. **函数调用规范**：使用 OpenAI Tools / Function-calling 协议，让大模型以结构化 JSON 形式触发本地 Python 工具。
-3. **易扩展工具系统**：只需继承 `BaseTool` 并实现 `execute()`，即可无缝接入新功能（检索、数据库查询、文件操作……）。
-4. **可替换 LLM 后端**：当前实现依赖本地 vLLM/OpenAI 兼容接口，修改 `llm_interface.py` 即可接入其他模型服务。
-5. **CLI 演示**：`python agent/main.py --prompt "问题"` 即可在终端体验完整的思考→调用→回答流程。
+1. **ReAct 思维链**：模型通过思考-行动-观察循环模式解决问题，支持多轮迭代。
+2. **原生 Function Calling**：✨ **新增** 使用 OpenAI 标准 Function Calling 协议，让大模型以结构化 JSON 形式触发工具，更加健壮可靠。
+3. **工具注册系统**：✨ **新增** 通过 `ToolRegistry` 实现工具解耦，支持装饰器、手动注册、批量注册等多种方式，灵活管理工具。
+4. **易扩展工具系统**：只需继承 `BaseTool` 并实现 `execute()`，即可无缝接入新功能（检索、数据库查询、文件操作……）。
+5. **可替换 LLM 后端**：当前实现依赖本地 vLLM/OpenAI 兼容接口，修改 `llm_interface.py` 即可接入其他模型服务。
+6. **完善的日志系统**：✨ **新增** 基于 Python logging 模块，提供详细的调试信息和错误追踪。
+7. **向后兼容**：同时支持新的工具注册方式和旧的直接传入工具列表方式。
+8. **CLI 演示**：`python agent/main.py --prompt "问题"` 即可在终端体验完整的思考→调用→回答流程。
 
 ---
 
@@ -48,33 +51,62 @@ agent/
 
 ## 🚀 快速上手
 
-1. **启动/配置 LLM 服务**  
-   默认 `llm_interface.py` 指向 `http://localhost:8000/v1`，请确认你的 vLLM/OpenAI 兼容端点监听在此地址。
-
-2. **运行示例**
+### 1. 安装依赖
 
 ```bash
-# 进入项目根目录
 cd /data/clj/Project/ProgrammingStudy/agent
-
-# 简单算术示例
-python main.py --prompt "3*2-1=?"
-# 预期输出节选
-# <thought>这是一个简单的数学运算问题。</thought>
-# ...
-# <final_answer>计算结果是5。</final_answer>
+pip install -r requirements.txt
 ```
 
-3. **查看工具调用日志**  
-   运行过程中，`agent.core.agent.Agent` 会打印每轮 `messages`、`tools_info`、`tool_calls` 等调试信息，便于理解交互流程。
+### 2. 启动/配置 LLM 服务
+
+默认 `llm_interface.py` 指向 `http://localhost:8000/v1`，请确认你的 vLLM/OpenAI 兼容端点监听在此地址。
+
+### 3. 运行示例
+
+```bash
+# 基础示例（使用新的工具注册系统）
+python main.py --prompt "计算 3*7+2 的结果" --mode v2
+
+# 使用旧的方式（向后兼容）
+python main.py --prompt "计算 3*2-1 的结果" --mode v1
+
+# 启用调试日志
+python main.py --prompt "今天天气怎么样？" --debug
+
+# 自定义最大步数
+python main.py --prompt "复杂问题" --max_steps 10
+```
+
+### 4. 查看工具调用日志
+
+运行过程中，系统会输出详细的日志信息：
+- 工具注册情况
+- 每轮思考过程
+- 工具调用和执行结果
+- 错误信息和堆栈
+
+示例输出：
+```
+2024-11-30 10:00:00 - Agent 初始化完成，已注册 3 个工具: ToolRegistry(tools=['calculator', 'search', 'addFile'])
+2024-11-30 10:00:01 - 开始处理用户输入: 计算 3*7+2 的结果
+2024-11-30 10:00:02 - 解析到工具调用: calculator({'expression': '3*7+2'})
+2024-11-30 10:00:02 - 工具 calculator 执行成功: 3*7+2 = 23
+```
 
 ---
 
 ## 🧩 添加自定义工具
 
-1. 在 `core/tools/` 创建新文件或在 `builtin.py` 中新增类，继承 `BaseTool`：
+✨ **新版本支持三种注册方式，更加灵活！**
+
+### 方式1: 使用装饰器注册（推荐）
 
 ```python
+from core.tools.base import BaseTool
+from core.tool_registry import tool_registry
+
+@tool_registry.register
 class MyTool(BaseTool):
     def __init__(self):
         super().__init__(
@@ -93,15 +125,41 @@ class MyTool(BaseTool):
         return f"你传入了 {param}"
 ```
 
-2. 在 `agent/main.py` 的 `build_agent()` 中加入实例：
+### 方式2: 手动注册
 
 ```python
-from core.tools.builtin import Calculator, Search, FileOperations, MyTool
+from core.tool_registry import ToolRegistry
+from core.tools.builtin import Calculator, Search
 
-tools = [Calculator(), Search(), FileOperations(), MyTool()]
+# 创建注册器
+registry = ToolRegistry()
+
+# 单个注册
+registry.register_tool(Calculator())
+
+# 批量注册
+registry.register_tools([
+    Search(),
+    MyTool(),
+])
+
+# 在 Agent 中使用
+agent = Agent(llm=llm, tool_registry=registry)
 ```
 
-3. 重新运行 CLI，模型即可调用新工具。
+### 方式3: 传统方式（向后兼容）
+
+```python
+from core.agent import Agent
+from core.tools.builtin import Calculator, MyTool
+
+tools = [Calculator(), MyTool()]
+agent = Agent(llm=llm, tools=tools)
+```
+
+### 完整示例
+
+查看 `examples/custom_tool_example.py` 获取完整的自定义工具示例代码。
 
 ---
 
