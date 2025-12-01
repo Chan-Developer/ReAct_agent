@@ -36,8 +36,7 @@ def build_agent_v1(max_steps: int) -> Agent:
     return Agent(
         llm=llm,
         tools=tools,
-        max_rounds=max_steps,
-        use_native_function_calling=False  # 使用XML模式，不传递tools参数
+        max_rounds=max_steps
     )
 
 def build_agent_v2(max_steps: int) -> Agent:
@@ -86,12 +85,7 @@ def main() -> None:
         default="计算 3*7+2 的结果",
         type=str
     )
-    parser.add_argument(
-        "--mode",
-        help="Agent building mode: v1 (legacy) or v2 (registry)",
-        default="v2",
-        choices=["v1", "v2"]
-    )
+
     parser.add_argument(
         "--debug",
         help="Enable debug logging",
@@ -105,11 +99,8 @@ def main() -> None:
         logging.getLogger().setLevel(logging.DEBUG)
     
     # 构建 Agent
-    logger.info(f"使用模式: {args.mode}")
-    if args.mode == "v1":
-        agent = build_agent_v1(args.max_steps)
-    else:
-        agent = build_agent_v2(args.max_steps)
+
+    agent = build_agent_v1(args.max_steps)
     
     # 运行
     logger.info(f"用户输入: {args.prompt}")

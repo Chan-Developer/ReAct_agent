@@ -4,24 +4,25 @@ from openai import OpenAI
 class VllmLLM:
     """使用本地 vllm OpenAI 兼容接口的 LLM 封装。"""
 
-    def __init__(self, base_url: str = "http://localhost:8000/v1", model: str = "Qwen2.5-VL-7B", timeout: int = 120):
+    def __init__(self, base_url: str = "http://localhost:8000/v1", model: str = "Qwen3-0.6B/", timeout: int = 120):
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.timeout = timeout
 
-    def chat(self, messages, tools_info=None, temperature: float = 0.7, max_tokens: int = 1024):
+    def chat(self, messages, temperature: float = 0.7, max_tokens: int = 1024):
         """
         与 vllm OpenAI 兼容 /chat/completions 端点通信。
+        
+        注意: vllm 不支持原生的 tools 参数，工具信息应该在调用前编码到 
+        messages 中的系统提示词里，由 Agent 层面处理。
 
         参数:
             messages (list[dict]): OpenAI 风格的消息列表。
-            tools_info (list[dict]|None): OpenAI tools 参数，将直接传递给接口。
             temperature (float): 采样温度。
             max_tokens (int): 最大生成 token 数。
 
         返回:
-            dict: 单条 message，对齐 OpenAI 返回格式，例如 
-            {"role": "assistant", "content": "...", "tool_calls": [...]}
+            dict: 单条 message，格式为 {"role": "assistant", "content": "..."}
         """
         payload = {
             "model": self.model,
@@ -29,11 +30,6 @@ class VllmLLM:
             "temperature": temperature,
             "max_tokens": max_tokens,
         }
-        
-        # 如果提供了工具信息，则添加到 payload 中
-        if tools_info:
-            payload["tools"] = tools_info
-            payload["tool_choice"] = "auto"  # 让模型自动决定是否调用工具
 
         url = f"{self.base_url}/chat/completions"
         try:

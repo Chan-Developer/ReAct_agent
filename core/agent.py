@@ -41,22 +41,37 @@ class Message:
 
     # ---------- 工具方法 ----------
     def to_dict(self) -> Dict[str, Any]:
+        """转换为字典格式，用于发送给 LLM。
+        
+        注意: vllm 不支持 tool 角色和相关字段。
+        - tool 角色会转换为 user 角色，内容添加前缀说明
+        - 不包含 tool_calls 和 tool_call_id
+        """
+        # vllm 不支持 tool 角色，转换为 user 角色
+        if self.role == Role.TOOL:
+            role = "user"
+            # 添加工具结果的前缀，让模型知道这是工具返回
+            tool_name = self.name or "unknown"
+            content = f"[工具 {tool_name} 返回结果]\n{self.content}"
+        else:
+            role = self.role.value
+            content = self.content
+        
         data: Dict[str, Any] = {
-            "role": self.role.value,
+            "role": role,
         }
         
-        # content 可以为 None（当有 tool_calls 时）
-        if self.content is not None:
-            data["content"] = self.content
-        
-        if self.tool_calls:
-            data["tool_calls"] = self.tool_calls
+        # content 必须存在
+        if content is not None:
+            data["content"] = content
             
-        if self.name:
-            data["name"] = self.name
-            
-        if self.tool_call_id:
-            data["tool_call_id"] = self.tool_call_id
+        # 以下字段 vllm 不支持，不添加到 data 中
+        # if self.name:
+        #     data["name"] = self.name
+        # if self.tool_calls:
+        #     data["tool_calls"] = self.tool_calls
+        # if self.tool_call_id:
+        #     data["tool_call_id"] = self.tool_call_id
             
         return data
 
@@ -94,8 +109,7 @@ class Agent:
         tools: Optional[List[BaseTool]] = None,
         tool_registry: Optional[ToolRegistry] = None,
         max_rounds: int = 5, 
-        project_directory: str = ".",
-        use_native_function_calling: bool = True
+        project_directory: str = "."
     ):
         """
         初始化 Agent。
@@ -106,12 +120,10 @@ class Agent:
             tool_registry: 工具注册器（可选，与 tools 二选一）
             max_rounds: 最大思考轮数
             project_directory: 项目目录
-            use_native_function_calling: 是否使用原生 Function Calling（推荐）
         """
         self.llm = llm
         self.max_rounds = max_rounds
         self.project_directory = project_directory
-        self.use_native_function_calling = use_native_function_calling
         
         # 工具管理
         if tool_registry is not None:
@@ -132,76 +144,95 @@ class Agent:
 
     # --------- 工具调用解析 ---------
     def _extract_tool_calls_from_native(self, llm_response: dict) -> Optional[List[dict]]:
-        """从 LLM 原生返回的 tool_calls 中提取工具调用信息（推荐方式）。"""
+        """从 LLM 响应中提取工具调用信息。
+        
+        支持两种方式：
+        1. 原生 tool_calls 字段（OpenAI API 标准格式）
+        2. 从文本内容中解析 JSON 格式的工具调用
+        """
+        # 方式1: 尝试从 tool_calls 字段提取（标准 OpenAI 格式）
         tool_calls = llm_response.get("tool_calls")
-        if not tool_calls:
-            return None
+        if tool_calls:
+            parsed_calls = []
+            for tc in tool_calls:
+                try:
+                    func_info = tc.get("function", {})
+                    name = func_info.get("name")
+                    arguments_str = func_info.get("arguments", "{}")
+                    
+                    # 解析 JSON 参数
+                    if isinstance(arguments_str, str):
+                        arguments = json.loads(arguments_str)
+                    else:
+                        arguments = arguments_str
+                    
+                    parsed_calls.append({
+                        "id": tc.get("id"),
+                        "name": name,
+                        "arguments": arguments
+                    })
+                    logger.info(f"解析到工具调用: {name}({arguments})")
+                except json.JSONDecodeError as e:
+                    logger.error(f"工具调用参数解析失败: {e}, 原始数据: {tc}")
+                    continue
+            
+            return parsed_calls if parsed_calls else None
         
-        parsed_calls = []
-        for tc in tool_calls:
-            try:
-                func_info = tc.get("function", {})
-                name = func_info.get("name")
-                arguments_str = func_info.get("arguments", "{}")
-                
-                # 解析 JSON 参数
-                if isinstance(arguments_str, str):
-                    arguments = json.loads(arguments_str)
-                else:
-                    arguments = arguments_str
-                
-                parsed_calls.append({
-                    "id": tc.get("id"),
-                    "name": name,
-                    "arguments": arguments
-                })
-                logger.info(f"解析到工具调用: {name}({arguments})")
-            except json.JSONDecodeError as e:
-                logger.error(f"工具调用参数解析失败: {e}, 原始数据: {tc}")
-                continue
-        
-        return parsed_calls if parsed_calls else None
-    
-    def _extract_tool_calls_from_xml(self, content: str) -> Optional[List[dict]]:
-        """从 LLM 输出的 <action>...</action> 标签中解析工具调用（兼容旧格式）。"""
+        # 方式2: 从文本内容中解析工具调用
+        content = llm_response.get("content", "")
         if not content:
             return None
         
-        # 匹配 <action>function_name(arg1, arg2)</action> 格式
-        match = re.search(r"<action>\s*([^<]+)\s*</action>", content)
-        if not match:
-            return None
+        # 尝试匹配 JSON 格式的函数调用
+        # 格式: {"name": "tool_name", "arguments": {"arg1": "value1"}}
+        import re
         
-        action_str = match.group(1).strip()
-        logger.info(f"从 XML 解析工具调用: {action_str}")
+        # 匹配 JSON 对象的模式，支持嵌套
+        # 使用更宽松的匹配，允许换行和空格
+        json_pattern = r'\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*(\{[^}]*\})\s*\}'
+        matches = re.findall(json_pattern, content, re.DOTALL)
         
-        if not action_str:
-            return None
-            
-        # 尝试解析函数调用格式：function_name(arg1="value1", arg2="value2")
-        func_match = re.match(r'(\w+)\s*\((.*)\)$', action_str)
-        if func_match:
-            func_name = func_match.group(1)
-            args_str = func_match.group(2).strip()
-            
-            # 简单解析参数
-            arguments = {}
-            if args_str:
-                import shlex
+        if matches:
+            parsed_calls = []
+            for match in matches:
                 try:
-                    args_list = shlex.split(args_str.replace('=', ' '))
-                    for i in range(0, len(args_list), 2):
-                        if i + 1 < len(args_list):
-                            key = args_list[i]
-                            value = args_list[i + 1]
-                            arguments[key] = value
-                except Exception as e:
-                    logger.warning(f"参数解析失败: {e}，使用原始字符串")
-                    arguments["raw"] = args_str
+                    tool_name = match[0]
+                    args_str = match[1]
+                    
+                    # 解析参数 JSON
+                    arguments = json.loads(args_str) if args_str.strip() else {}
+                    
+                    parsed_calls.append({
+                        "id": None,
+                        "name": tool_name,
+                        "arguments": arguments
+                    })
+                    logger.info(f"从文本解析到工具调用: {tool_name}({arguments})")
+                except (json.JSONDecodeError, IndexError) as e:
+                    logger.warning(f"解析工具调用失败: {e}, 原始匹配: {match}")
+                    continue
             
-            return [{"name": func_name, "arguments": arguments}]
+            return parsed_calls if parsed_calls else None
         
-        return [{"name": "unknown", "arguments": {"raw": action_str}}]
+        # 如果上面的模式没匹配到，尝试更简单的模式
+        # 匹配整个 JSON 对象
+        simple_pattern = r'\{[^}]*"name"[^}]*\}'
+        for match in re.finditer(simple_pattern, content):
+            try:
+                json_str = match.group(0)
+                call_data = json.loads(json_str)
+                if "name" in call_data:
+                    logger.info(f"从文本解析到工具调用: {call_data['name']}({call_data.get('arguments', {})})")
+                    return [{
+                        "id": None,
+                        "name": call_data["name"],
+                        "arguments": call_data.get("arguments", {})
+                    }]
+            except json.JSONDecodeError:
+                continue
+        
+        return None
+    
 
     def get_operating_system_name(self):
         os_map = {
@@ -261,16 +292,12 @@ class Agent:
         logger.info(f"开始处理用户输入: {user_input}")
         
         # 添加用户消息
-        if self.use_native_function_calling:
-            self.conversation.append(Message.user(user_input))
-        else:
-            # XML 格式兼容模式
-            self.conversation.append(Message.user(f"<question>{user_input}</question>"))
+        self.conversation.append(Message.user(user_input))
         
         # 渲染系统提示
         system_prompt = self.render_system_prompt(react_system_prompt_template)
         self.system_prompt = system_prompt
-        logger.debug(f"System Prompt: {system_prompt[:200]}...")
+        logger.debug(f"System Prompt: {system_prompt}")
 
         # 迭代思考-行动循环
         for round_num in range(1, self.max_rounds + 1):
@@ -283,26 +310,22 @@ class Agent:
                 return f"抱歉，处理过程中出现错误: {e}"
 
             content = llm_resp.get("content", "")
-            logger.info(f"LLM 响应: {content[:200]}...")
+            logger.info(f"LLM 响应: {content}")
             
             # 尝试提取工具调用
-            if self.use_native_function_calling:
-                tool_calls = self._extract_tool_calls_from_native(llm_resp)
-            else:
-                tool_calls = self._extract_tool_calls_from_xml(content)
+            tool_calls = self._extract_tool_calls_from_native(llm_resp)
 
             # 如果有工具调用，执行工具
             if tool_calls:
-                # 保存 assistant 消息（包含 tool_calls）
                 assistant_msg = Message.assistant(content, tool_calls)
                 self.conversation.append(assistant_msg)
                 
                 logger.info(f"检测到 {len(tool_calls)} 个工具调用")
                 self._act(tool_calls)
-                continue  # 继续下一轮思考
+                continue  
 
             # 检查是否有最终答案
-            if "<final_answer>" in content or "final_answer" in content.lower():
+            if "final_answer" in content.lower():
                 self.conversation.append(Message.assistant(content))
                 logger.info("任务完成，返回最终答案")
                 return content
@@ -316,10 +339,6 @@ class Agent:
                 logger.info("达到最大轮数，返回当前回答")
                 return content
             
-            # 如果模型给出了较长的回答（不是简单的思考），也可以返回
-            if not self.use_native_function_calling and len(content.strip()) > 20 and round_num > 1:
-                logger.info("检测到模型给出了直接回答")
-                return content
 
         logger.warning("达到最大迭代次数，任务可能未完成")
         return "达到最大迭代次数，任务可能未完成。请尝试简化问题或增加 max_rounds 参数。"
@@ -331,18 +350,12 @@ class Agent:
         messages.append({"role": "system", "content": self.system_prompt})
         messages.extend([m.to_dict() for m in self.conversation])
 
-        # 如果使用原生 Function Calling，传入工具信息
-        tools_info = None
-        if self.use_native_function_calling and len(self.tool_registry) > 0:
-            tools_info = self.tool_registry.get_tools_spec()
-            logger.debug(f"传入 {len(tools_info)} 个工具给 LLM")
-
         try:
-            response = self.llm.chat(messages, tools_info=tools_info)
+            response = self.llm.chat(messages)
             logger.debug(f"LLM 返回: {response}")
             return response
         except Exception as e:
-            logger.error(f"LLM 请求失败: {e}", exc_info=True)
+            logger.error(f"LLM 调用失败: {e}", exc_info=True)
             raise
 
     def _act(self, tool_calls: List[dict]):
@@ -354,7 +367,6 @@ class Agent:
             
             logger.info(f"执行工具: {name}, 参数: {args}")
             
-            # 从注册器获取工具
             tool = self.tool_registry.get_tool(name)
             
             if tool is None:
