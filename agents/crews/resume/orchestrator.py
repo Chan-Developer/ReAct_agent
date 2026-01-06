@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import json
 import time
 
-from .base import LLMProtocol, AgentResult
+from agents.base import LLMProtocol, AgentResult
 from .content_agent import ContentAgent
 from .layout_agent import LayoutAgent, LayoutConfig
 from common.logger import get_logger
@@ -33,7 +33,7 @@ class OrchestratorResult:
     error: Optional[str] = None
 
 
-class ResumeAgentOrchestrator:
+class ResumeOrchestrator:
     """
     简历 Agent 协调器
     
@@ -62,7 +62,7 @@ class ResumeAgentOrchestrator:
         self.execution_logs: List[str] = []
         
         logger.info(
-            f"ResumeAgentOrchestrator 初始化完成 "
+            f"ResumeOrchestrator 初始化完成 "
             f"(内容优化: {enable_content_optimization}, 布局优化: {enable_layout_optimization})"
         )
     

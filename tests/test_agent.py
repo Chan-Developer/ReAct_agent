@@ -3,7 +3,8 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from core import Agent, Conversation, Message, Role
+from agents import ReactAgent
+from core import Conversation, Message, Role
 from tools import Calculator, ToolRegistry
 
 
@@ -19,13 +20,13 @@ class MockLLM:
         return response
 
 
-class TestAgent:
-    """Agent 测试"""
+class TestReactAgent:
+    """ReactAgent 测试"""
     
     def test_init_with_tools(self):
         """测试使用工具列表初始化"""
         llm = MockLLM([{"content": "final_answer: ok"}])
-        agent = Agent(llm=llm, tools=[Calculator()])
+        agent = ReactAgent(llm=llm, tools=[Calculator()])
         
         assert len(agent.tool_registry) == 1
         assert "calculator" in agent.tool_registry
@@ -36,14 +37,14 @@ class TestAgent:
         registry = ToolRegistry()
         registry.register(Calculator())
         
-        agent = Agent(llm=llm, tool_registry=registry)
+        agent = ReactAgent(llm=llm, tool_registry=registry)
         
         assert len(agent.tool_registry) == 1
     
     def test_simple_answer(self):
         """测试直接回答"""
         llm = MockLLM([{"content": "final_answer: 你好！"}])
-        agent = Agent(llm=llm, tools=[])
+        agent = ReactAgent(llm=llm, tools=[])
         
         result = agent.run("你好")
         
@@ -57,7 +58,7 @@ class TestAgent:
             {"content": "final_answer: 1+1 = 2"},
         ]
         llm = MockLLM(responses)
-        agent = Agent(llm=llm, tools=[Calculator()])
+        agent = ReactAgent(llm=llm, tools=[Calculator()])
         
         result = agent.run("计算 1+1")
         
@@ -67,7 +68,7 @@ class TestAgent:
     def test_reset(self):
         """测试重置对话"""
         llm = MockLLM([{"content": "final_answer: ok"}])
-        agent = Agent(llm=llm, tools=[])
+        agent = ReactAgent(llm=llm, tools=[])
         
         agent.run("test")
         assert len(agent.conversation) > 0

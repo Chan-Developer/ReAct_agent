@@ -11,7 +11,7 @@ Content Agent - 简历内容优化专家
 from typing import Any, Dict, List, Optional
 import json
 
-from .base import BaseLLMAgent, AgentResult, LLMProtocol
+from agents.base import BaseLLMAgent, AgentResult, LLMProtocol
 from common.logger import get_logger
 
 logger = get_logger(__name__)

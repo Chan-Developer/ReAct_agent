@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 import json
 
-from .base import BaseLLMAgent, AgentResult, LLMProtocol
+from agents.base import BaseLLMAgent, AgentResult, LLMProtocol
 from common.logger import get_logger
 
 logger = get_logger(__name__)

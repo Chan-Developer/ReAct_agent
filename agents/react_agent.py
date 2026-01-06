@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Agent 核心模块。
+"""ReAct Agent 模块。
 
-实现 ReAct 风格的智能代理。
+实现 ReAct（Reasoning + Acting）风格的智能代理。
+用于 Solo 模式。
 """
 from __future__ import annotations
 
@@ -13,8 +14,8 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Protocol
 from common import get_config, get_logger
 from prompts import REACT_SYSTEM_PROMPT
 
-from .message import Conversation
-from .parser import parse_tool_calls
+from core.message import Conversation
+from core.parser import parse_tool_calls
 
 if TYPE_CHECKING:
     from tools import ToolRegistry
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-__all__ = ["Agent"]
+__all__ = ["ReactAgent"]
 
 
 class LLMProtocol(Protocol):
@@ -30,17 +31,18 @@ class LLMProtocol(Protocol):
     def chat(self, messages: List[Dict[str, Any]], **kwargs) -> Dict[str, Any]: ...
 
 
-class Agent:
+class ReactAgent:
     """ReAct 风格智能代理。
     
     实现"思考 → 行动 → 观察 → 最终答案"的循环。
+    用于 Solo 模式（单 Agent）。
     
     Example:
         >>> from llm import ModelScopeOpenAI
-        >>> from tools import Calculator, ToolRegistry
+        >>> from tools import Calculator
         >>> 
         >>> llm = ModelScopeOpenAI()
-        >>> agent = Agent(llm=llm, tools=[Calculator()])
+        >>> agent = ReactAgent(llm=llm, tools=[Calculator()])
         >>> response = agent.run("计算 3*7+2")
     """
     
@@ -72,7 +74,7 @@ class Agent:
         self.conversation = Conversation()
         self._system_prompt: Optional[str] = None
         
-        logger.info(f"Agent 初始化完成，已注册 {len(self.tool_registry)} 个工具")
+        logger.info(f"ReactAgent 初始化完成，已注册 {len(self.tool_registry)} 个工具")
 
     def _init_registry(
         self,
@@ -214,3 +216,8 @@ class Agent:
         return {"Darwin": "macOS", "Windows": "Windows", "Linux": "Linux"}.get(
             platform.system(), "Unknown"
         )
+
+
+# 向后兼容别名
+Agent = ReactAgent
+
