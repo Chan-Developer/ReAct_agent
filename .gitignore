@@ -48,3 +48,12 @@ htmlcov/
 example.txt
 *.txt.bak
 
+# 配置文件（包含敏感信息）
+configs/config.yaml
+!configs/example.yaml
+
+# 输出目录
+output/
+
+
+

@@ -5,9 +5,14 @@ openai>=1.0.0
 # Optional: for better logging
 coloredlogs>=15.0
 
+# Document generation (for ResumeGenerator tool)
+python-docx>=1.1.0
+
 # Development dependencies (optional)
 # pytest>=7.4.0
 # black>=23.0.0
 # flake8>=6.0.0
 # mypy>=1.5.0
+
+
 

@@ -1,0 +1,20 @@
+# Agent 配置示例
+# 复制此文件为 config.yaml 并修改
+
+# LLM 配置
+llm:
+  provider: modelscope  # modelscope 或 vllm
+  model: Qwen/Qwen3-32B
+  temperature: 0.7
+  max_tokens: 1024
+  timeout: 120
+
+# Agent 配置
+agent:
+  max_rounds: 5
+  output_dir: ./output
+
+# 日志配置
+logging:
+  level: INFO  # DEBUG, INFO, WARNING, ERROR
+

@@ -1,199 +1,275 @@
-# ReAct Agent 示例项目
+# 🤖 ReAct Agent
 
-> 基于 **ReAct (Reasoning and Acting)** 框架的智能代理系统，通过「思考-行动-观察」循环模式，结合自然语言解析实现工具调用的轻量级 Agent。
+基于 ReAct（Reasoning + Acting）模式的智能代理框架，支持工具调用和多轮对话。
 
----
+## ✨ 特性
 
-## ✨ 功能特性
+- 🧠 **ReAct 模式**：思考 → 行动 → 观察 → 最终答案
+- 🤖 **多 Agent 协作**：ContentAgent + LayoutAgent 智能简历优化
+- 🔧 **工具调用**：支持计算器、搜索、文件操作、文档生成等
+- 🔌 **多 LLM 支持**：ModelScope 云端 / 本地 vLLM
+- 📝 **简历生成**：AI 优化内容 + 智能布局编排
+- 🏗️ **模块化设计**：易于扩展和定制
 
-1. **ReAct 思维链**：模型通过思考-行动-观察循环模式解决问题，支持多轮迭代。
-2. **原生 Function Calling**：✨ **新增** 使用 OpenAI 标准 Function Calling 协议，让大模型以结构化 JSON 形式触发工具，更加健壮可靠。
-3. **工具注册系统**：✨ **新增** 通过 `ToolRegistry` 实现工具解耦，支持装饰器、手动注册、批量注册等多种方式，灵活管理工具。
-4. **易扩展工具系统**：只需继承 `BaseTool` 并实现 `execute()`，即可无缝接入新功能（检索、数据库查询、文件操作……）。
-5. **可替换 LLM 后端**：当前实现依赖本地 vLLM/OpenAI 兼容接口，修改 `llm_interface.py` 即可接入其他模型服务。
-6. **完善的日志系统**：✨ **新增** 基于 Python logging 模块，提供详细的调试信息和错误追踪。
-7. **向后兼容**：同时支持新的工具注册方式和旧的直接传入工具列表方式。
-8. **CLI 演示**：`python agent/main.py --prompt "问题"` 即可在终端体验完整的思考→调用→回答流程。
+## 📁 项目结构
 
----
-
-## 🗂️ 目录结构
-
-```text
+```
 agent/
-├── core/               # Agent 与工具核心逻辑
-│   ├── agent.py        # ReAct Agent 主体
-│   └── tools/
-│       ├── base.py     # BaseTool 抽象类
-│       └── builtin.py  # Calculator / Search / FileOperations 示例工具
-├── llm_interface.py    # vLLM(OpenAI 兼容) 调用封装
-├── main.py             # CLI 入口
-└── README.md           # 项目说明（当前文件）
+├── core/                   # 核心业务逻辑
+│   ├── agent.py           # Agent 核心类
+│   ├── message.py         # 消息和对话
+│   └── parser.py          # 工具调用解析
+│
+├── agents/                 # 多 Agent 系统 ⭐ NEW
+│   ├── base.py            # Agent 基类 (Think→Execute→Reflect)
+│   ├── content_agent.py   # 内容优化专家
+│   ├── layout_agent.py    # 布局编排专家
+│   └── orchestrator.py    # 多 Agent 协调器
+│
+├── common/                 # 基础设施
+│   ├── config.py          # 配置管理
+│   ├── logger.py          # 日志管理
+│   └── exceptions.py      # 自定义异常
+│
+├── prompts/                # 提示词模板
+│   ├── agent.py           # Agent 系统提示
+│   └── resume.py          # 简历优化提示
+│
+├── llm/                    # LLM 接口
+│   ├── base.py            # LLM 抽象基类
+│   ├── vllm.py            # vLLM 本地服务
+│   └── modelscope.py      # ModelScope 云端
+│
+├── tools/                  # 工具模块
+│   ├── base.py            # 工具基类
+│   ├── registry.py        # 工具注册器
+│   ├── builtin/           # 内置工具
+│   └── generators/        # 生成器工具
+│
+├── tests/                  # 测试
+├── configs/                # 配置文件
+├── scripts/                # 脚本
+├── output/                 # 输出目录
+│
+├── main.py                 # CLI 入口
+├── pyproject.toml          # 项目配置
+└── requirements.txt        # 依赖
 ```
 
----
-
-## ⚙️ 环境要求
-
-- Python ≥ 3.9
-- 已启动的 OpenAI 兼容接口（本地 vLLM / OpenAI / Azure 等）
-- 依赖包：`requests`、（如需 vLLM 推理服务自行安装）
-
-> 若你使用 **conda / venv**，可按需创建虚拟环境并安装依赖：
->
-> ```bash
-> python -m venv .venv && source .venv/bin/activate
-> pip install -r requirements.txt   # 如果已提供
-> pip install requests             # 示例最小依赖
-> ```
-
----
-
-## 🚀 快速上手
+## 🚀 快速开始
 
 ### 1. 安装依赖
 
 ```bash
-cd /data/clj/Project/ProgrammingStudy/agent
 pip install -r requirements.txt
+
+# 如需生成 Word 简历
+pip install python-docx
 ```
 
-### 2. 启动/配置 LLM 服务
-
-默认 `llm_interface.py` 指向 `http://localhost:8000/v1`，请确认你的 vLLM/OpenAI 兼容端点监听在此地址。
-
-### 3. 运行示例
+### 2. 配置 API Key
 
 ```bash
-# 基础示例（使用新的工具注册系统）
-python main.py --prompt "计算 3*7+2 的结果" --mode v2
-
-# 使用旧的方式（向后兼容）
-python main.py --prompt "计算 3*2-1 的结果" --mode v1
-
-# 启用调试日志
-python main.py --prompt "今天天气怎么样？" --debug
-
-# 自定义最大步数
-python main.py --prompt "复杂问题" --max_steps 10
+export MODELSCOPE_API_KEY="your-api-key"
 ```
 
-### 4. 查看工具调用日志
+### 3. 运行
 
-运行过程中，系统会输出详细的日志信息：
-- 工具注册情况
-- 每轮思考过程
-- 工具调用和执行结果
-- 错误信息和堆栈
+```bash
+# 基本使用
+python main.py --prompt "计算 3*7+2 的结果"
 
-示例输出：
+# 生成简历
+python main.py --prompt "帮我生成一份简历，我叫张三，电子科技大学硕士"
+
+# 调试模式
+python main.py --prompt "你好" --debug
+
+# 使用本地 vLLM
+python main.py --local --prompt "你好"
 ```
-2024-11-30 10:00:00 - Agent 初始化完成，已注册 3 个工具: ToolRegistry(tools=['calculator', 'search', 'addFile'])
-2024-11-30 10:00:01 - 开始处理用户输入: 计算 3*7+2 的结果
-2024-11-30 10:00:02 - 解析到工具调用: calculator({'expression': '3*7+2'})
-2024-11-30 10:00:02 - 工具 calculator 执行成功: 3*7+2 = 23
+
+## 🤖 多 Agent 简历生成
+
+### 快速启动
+
+```bash
+# 多 Agent 模式（推荐）
+python scripts/run_resume_agent.py --name "陈亮江" --school "电子科技大学" --major "电子信息"
+
+# 自定义样式
+python scripts/run_resume_agent.py --name "张三" --style professional
+
+# 简单模式（不使用 AI）
+python scripts/run_resume_agent.py --name "李四" --simple
 ```
 
----
+### 参数说明
 
-## 🧩 添加自定义工具
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `--name` | 陈亮江 | 姓名 |
+| `--school` | 电子科技大学 | 学校 |
+| `--major` | 电子信息 | 专业 |
+| `--output` | ./output | 输出目录 |
+| `--style` | modern | 样式 (modern/classic/minimal/professional) |
+| `--simple` | - | 简单模式，跳过 AI 优化 |
 
-✨ **新版本支持三种注册方式，更加灵活！**
+### 多 Agent 架构
 
-### 方式1: 使用装饰器注册（推荐）
+```
+┌─────────────────────────────────────────────────────────┐
+│              ResumeAgentOrchestrator                     │
+│                   (多 Agent 协调器)                       │
+└────────────────────────┬────────────────────────────────┘
+                         │
+         ┌───────────────┴───────────────┐
+         │                               │
+         ▼                               ▼
+┌─────────────────────┐       ┌─────────────────────┐
+│    ContentAgent     │       │    LayoutAgent      │
+│   (内容优化专家)     │       │   (布局编排专家)     │
+├─────────────────────┤       ├─────────────────────┤
+│ • 成就量化           │       │ • 章节排序优化       │
+│ • STAR 法则重构      │       │ • 视觉层次设计       │
+│ • 关键词优化         │       │ • 内容密度调整       │
+│ • 个人简介润色       │       │ • 样式配置生成       │
+└─────────────────────┘       └─────────────────────┘
+         │                               │
+         └───────────────┬───────────────┘
+                         ▼
+              ┌─────────────────────┐
+              │   优化后的简历数据    │
+              │   + 布局配置         │
+              │   + 改进建议         │
+              └─────────────────────┘
+```
+
+### 代码示例
 
 ```python
-from core.tools.base import BaseTool
-from core.tool_registry import tool_registry
+from llm import ModelScopeOpenAI
+from agents import ResumeAgentOrchestrator
 
-@tool_registry.register
+# 创建 LLM 和协调器
+llm = ModelScopeOpenAI()
+orchestrator = ResumeAgentOrchestrator(
+    llm=llm,
+    enable_content_optimization=True,
+    enable_layout_optimization=True,
+)
+
+# 原始简历数据
+resume_data = {
+    "name": "张三",
+    "summary": "软件工程师",
+    "projects": [{"name": "项目A", "description": "做了一些事情"}]
+}
+
+# 运行优化
+result = orchestrator.optimize(resume_data)
+
+if result.success:
+    print(f"优化耗时: {result.execution_time:.2f}s")
+    print(f"优化后简历: {result.optimized_resume}")
+    print(f"布局配置: {result.layout_config}")
+    print(f"内容建议: {result.content_suggestions}")
+```
+
+## 🔧 扩展工具
+
+### 创建自定义工具
+
+```python
+from tools.base import BaseTool
+
 class MyTool(BaseTool):
     def __init__(self):
         super().__init__(
-            name="myTool",
-            description="自定义工具描述",
+            name="my_tool",
+            description="我的自定义工具",
             parameters={
                 "type": "object",
                 "properties": {
-                    "param": {"type": "string", "description": "示例参数"}
+                    "param1": {
+                        "type": "string",
+                        "description": "参数说明"
+                    }
                 },
-                "required": ["param"],
-            },
+                "required": ["param1"]
+            }
         )
 
-    def execute(self, param: str):
-        return f"你传入了 {param}"
+    def execute(self, param1: str) -> str:
+        return f"处理结果: {param1}"
 ```
 
-### 方式2: 手动注册
+### 注册工具
 
 ```python
-from core.tool_registry import ToolRegistry
-from core.tools.builtin import Calculator, Search
+from tools import ToolRegistry, Calculator
+from my_tools import MyTool
 
-# 创建注册器
 registry = ToolRegistry()
-
-# 单个注册
-registry.register_tool(Calculator())
-
-# 批量注册
 registry.register_tools([
-    Search(),
+    Calculator(),
     MyTool(),
 ])
-
-# 在 Agent 中使用
-agent = Agent(llm=llm, tool_registry=registry)
 ```
 
-### 方式3: 传统方式（向后兼容）
+## 🏗️ 架构设计
 
-```python
-from core.agent import Agent
-from core.tools.builtin import Calculator, MyTool
-
-tools = [Calculator(), MyTool()]
-agent = Agent(llm=llm, tools=tools)
+```
+┌─────────────────────────────────────────────────┐
+│                   main.py                       │
+│                  (CLI 入口)                      │
+└──────────────────────┬──────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────┐
+│                    Agent                         │
+│  ┌─────────────────────────────────────────┐    │
+│  │  思考(Think) → 行动(Act) → 观察(Observe) │    │
+│  └─────────────────────────────────────────┘    │
+└───────┬────────────────────────────┬────────────┘
+        │                            │
+┌───────▼───────┐          ┌─────────▼─────────┐
+│      LLM      │          │   ToolRegistry    │
+│  ┌─────────┐  │          │  ┌─────────────┐  │
+│  │ vLLM    │  │          │  │ Calculator  │  │
+│  ├─────────┤  │          │  ├─────────────┤  │
+│  │ModelScope│ │          │  │ Search      │  │
+│  └─────────┘  │          │  ├─────────────┤  │
+└───────────────┘          │  │ AddFile     │  │
+                           │  ├─────────────┤  │
+                           │  │ Resume Gen  │◄─┼── 多 Agent 优化
+                           │  └─────────────┘  │
+                           └───────────────────┘
 ```
 
-### 完整示例
+## 📋 配置说明
 
-查看 `examples/custom_tool_example.py` 获取完整的自定义工具示例代码。
+### 环境变量
 
----
+| 变量名 | 说明 | 默认值 |
+|--------|------|--------|
+| `MODELSCOPE_API_KEY` | ModelScope API 密钥 | (必填) |
+| `MODELSCOPE_MODEL` | 模型 ID | `Qwen/Qwen3-32B` |
+| `LOG_LEVEL` | 日志级别 | `INFO` |
+| `AGENT_MAX_ROUNDS` | 最大迭代轮数 | `5` |
 
-## 🏗️ Agent 工作流程
+## 🧪 测试
 
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant A as Agent
-    participant L as LLM
-    participant T as Tool
+```bash
+# 运行所有测试
+python -m pytest tests/ -v
 
-    U->>A: 提问
-    A->>L: system+history+functions
-    L-->>A: <thought> + tool_call JSON
-    A->>T: 执行 execute()
-    T-->>A: 结果 observation
-    A->>L: 把 observation 写入 history，继续下一轮 (最多 N 次)
-    L-->>A: 最终 <final_answer>
-    A-->>U: 回复
+# 运行特定测试
+python -m pytest tests/test_agents.py -v
+
+# 运行并显示覆盖率
+python -m pytest --cov=.
 ```
-
----
-
-## 🔧 常见问题
-
-| 问题 | 可能原因 | 解决方案 |
-|------|----------|-----------|
-| LLM 返回无 `tool_calls` | Prompt 不正确 / 工具描述不清晰 | 调整 system prompt，引导模型使用工具；补充 `description` 与示例 |
-| `Permission denied (publickey)` push 失败 | Git SSH Key 未配置 | 参考本 README 「推送到 GitHub」步骤，添加公钥 |
-| 工具执行报错 | 参数类型不匹配 / `execute` 抛异常 | 在 `execute` 内部做类型检查与异常捕获 |
-
----
 
 ## 📄 License
 
-本仓库以 MIT 协议开源，详情见 [LICENSE](LICENSE)。
+MIT License
