@@ -7,9 +7,22 @@
     prompts/
     ├── __init__.py      # 模块入口
     ├── agent.py         # Agent 系统提示词
+    ├── content.py       # 简历内容优化提示词
+    ├── layout.py        # 简历布局提示词
     └── resume.py        # 简历优化提示词
 """
 from .agent import REACT_SYSTEM_PROMPT
+from .content import (
+    CONTENT_AGENT_SYSTEM_PROMPT,
+    CONTENT_THINK_PROMPT,
+    CONTENT_EXECUTE_PROMPT,
+)
+from .layout import (
+    LAYOUT_AGENT_SYSTEM_PROMPT,
+    LAYOUT_THINK_PROMPT,
+    LAYOUT_EXECUTE_PROMPT,
+    LAYOUT_CONTENT_TRIM_PROMPT,
+)
 from .resume import (
     RESUME_OPTIMIZER_SYSTEM_PROMPT,
     RESUME_OPTIMIZE_PROMPT,
@@ -20,6 +33,15 @@ from .resume import (
 __all__ = [
     # Agent
     "REACT_SYSTEM_PROMPT",
+    # Content
+    "CONTENT_AGENT_SYSTEM_PROMPT",
+    "CONTENT_THINK_PROMPT",
+    "CONTENT_EXECUTE_PROMPT",
+    # Layout
+    "LAYOUT_AGENT_SYSTEM_PROMPT",
+    "LAYOUT_THINK_PROMPT",
+    "LAYOUT_EXECUTE_PROMPT",
+    "LAYOUT_CONTENT_TRIM_PROMPT",
     # Resume
     "RESUME_OPTIMIZER_SYSTEM_PROMPT",
     "RESUME_OPTIMIZE_PROMPT",

@@ -54,11 +54,20 @@ class AgentConfig:
 
 
 @dataclass
+class MilvusConfig:
+    """Milvus 向量数据库配置"""
+    host: str = "localhost"
+    port: int = 19530
+    alias: str = "default"
+
+
+@dataclass
 class Config:
     """全局配置"""
     log: LogConfig = field(default_factory=LogConfig)
     llm: LLMConfig = field(default_factory=LLMConfig)
     agent: AgentConfig = field(default_factory=AgentConfig)
+    milvus: MilvusConfig = field(default_factory=MilvusConfig)
     
     @classmethod
     def load(cls, config_path: Optional[str] = None) -> "Config":
@@ -135,6 +144,16 @@ class Config:
             if "logging" in data:
                 if "level" in data["logging"]:
                     self.log.level = data["logging"]["level"]
+            
+            # Milvus 配置
+            if "milvus" in data:
+                milvus = data["milvus"]
+                if "host" in milvus:
+                    self.milvus.host = milvus["host"]
+                if "port" in milvus:
+                    self.milvus.port = int(milvus["port"])
+                if "alias" in milvus:
+                    self.milvus.alias = milvus["alias"]
                     
         except ImportError:
             pass  # 没有 PyYAML 就跳过
@@ -160,6 +179,14 @@ class Config:
             self.llm.max_tokens = int(os.getenv("LLM_MAX_TOKENS", "1024"))
         if os.getenv("AGENT_MAX_ROUNDS"):
             self.agent.max_rounds = int(os.getenv("AGENT_MAX_ROUNDS", "5"))
+        
+        # Milvus 配置
+        if os.getenv("MILVUS_HOST"):
+            self.milvus.host = os.getenv("MILVUS_HOST", "localhost")
+        if os.getenv("MILVUS_PORT"):
+            self.milvus.port = int(os.getenv("MILVUS_PORT", "19530"))
+        if os.getenv("MILVUS_ALIAS"):
+            self.milvus.alias = os.getenv("MILVUS_ALIAS", "default")
 
 
 # 全局配置实例（延迟加载）

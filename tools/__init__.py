@@ -8,6 +8,9 @@
     - registry: 工具注册器
     - builtin: 内置工具（计算器、搜索、文件操作等）
     - generators: 生成器工具（简历生成等）
+
+注意：向量数据库客户端已移至 storage 模块，请使用:
+    from storage import MilvusClient
 """
 from .base import BaseTool, AsyncBaseTool
 from .registry import ToolRegistry

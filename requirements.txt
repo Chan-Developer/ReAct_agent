@@ -8,6 +8,9 @@ coloredlogs>=15.0
 # Document generation (for ResumeGenerator tool)
 python-docx>=1.1.0
 
+# Vector database (for Milvus tool)
+pymilvus>=2.3.0
+
 # Development dependencies (optional)
 # pytest>=7.4.0
 # black>=23.0.0

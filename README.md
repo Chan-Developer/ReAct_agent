@@ -1,195 +1,208 @@
-# 🤖 Agent Framework
+<p align="center">
+  <img src="https://img.shields.io/badge/🤖-Agent_Framework-blue?style=for-the-badge&labelColor=1a1a2e" alt="Agent Framework"/>
+</p>
 
-智能代理框架，支持单 Agent 和多 Agent 团队两种运行模式。
+<h1 align="center">Agent Framework</h1>
+
+<p align="center">
+  <strong>🚀 轻量级、可扩展的 Multi-Agent 智能协作框架</strong>
+</p>
+
+<p align="center">
+  <a href="#-特性">特性</a> •
+  <a href="#-快速开始">快速开始</a> •
+  <a href="#-架构">架构</a> •
+  <a href="#-扩展">扩展</a> •
+  <a href="#-文档">文档</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python"/>
+  <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License"/>
+  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"/>
+</p>
+
+---
+
+## 🎯 Why Agent Framework?
+
+构建智能 Agent 应该像搭积木一样简单。Agent Framework 提供：
+
+- **极简 API** - 3 行代码启动 Agent
+- **即插即用** - 工具、LLM、知识库随意组合
+- **生产就绪** - 完善的日志、错误处理、可观测性
+
+```python
+from core import Task, Orchestrator
+from agents.crews import ResumeCrew
+
+orchestrator = Orchestrator(llm)
+orchestrator.register(ResumeCrew)
+result = orchestrator.run(Task(name="resume", input_data=data))
+```
+
+---
 
 ## ✨ 特性
 
-- 🧠 **Solo 模式**：单 Agent，ReAct 思考-行动循环
-- 👥 **Crew 模式**：多 Agent 团队，多角色协作
-- 🔧 **工具调用**：支持计算器、搜索、文件操作、文档生成等
-- 🔌 **多 LLM 支持**：ModelScope 云端 / 本地 vLLM
-- 📝 **简历生成**：AI 优化内容 + 智能布局编排
-- 🏗️ **模块化设计**：易于扩展和定制
+<table>
+<tr>
+<td width="50%">
 
-## 📁 项目结构
+### 🧠 Solo 模式
+单 Agent + ReAct 循环，适合通用任务
+```bash
+python main.py solo -p "计算 3*7+2"
+```
 
+</td>
+<td width="50%">
+
+### 👥 Crew 模式
+多 Agent 协作，专业分工
+```bash
+python main.py crew --name "张三"
 ```
-agent/
-├── main.py                 # 🚀 统一 CLI 入口
-│
-├── agents/                 # Agent 实现
-│   ├── base.py            # LLM Agent 基类
-│   ├── react_agent.py     # ReactAgent（Solo 模式）
-│   │
-│   └── crews/             # Crew 团队（可扩展）
-│       └── resume/        # 简历优化 Crew
-│           ├── content_agent.py   # 内容优化专家
-│           ├── layout_agent.py    # 布局编排专家
-│           └── orchestrator.py    # 协调器
-│
-├── core/                   # 框架基础设施
-│   ├── message.py         # 消息和对话管理
-│   └── parser.py          # 工具调用解析器
-│
-├── tools/                  # 工具模块
-│   ├── base.py            # 工具基类
-│   ├── registry.py        # 工具注册器
-│   ├── builtin/           # 内置工具 (Calculator, Search, File)
-│   └── generators/        # 生成器工具 (Resume)
-│
-├── llm/                    # LLM 接口层
-│   ├── base.py            # LLM 抽象基类
-│   ├── vllm.py            # vLLM 本地服务
-│   └── modelscope.py      # ModelScope 云端
-│
-├── common/                 # 公共基础设施
-│   ├── config.py          # 配置管理
-│   ├── logger.py          # 日志管理
-│   └── exceptions.py      # 自定义异常
-│
-├── prompts/                # 提示词模板
-│   ├── agent.py           # Agent 系统提示
-│   └── resume.py          # 简历优化提示
-│
-├── configs/                # 配置文件
-├── tests/                  # 单元测试
-├── scripts/                # 辅助脚本
-├── output/                 # 输出目录
-│
-├── pyproject.toml          # 项目配置
-└── requirements.txt        # 依赖清单
+
+</td>
+</tr>
+<tr>
+<td>
+
+### 📚 RAG 知识库
+向量检索 + 上下文增强
+```python
+kb = VectorKnowledgeBase(milvus, embedding)
+orchestrator = Orchestrator(llm, kb)
 ```
+
+</td>
+<td>
+
+### 🔌 多 LLM 支持
+云端 API / 本地 vLLM 无缝切换
+```python
+llm = ModelScopeOpenAI()  # 云端
+llm = VllmLLM()           # 本地
+```
+
+</td>
+</tr>
+</table>
+
+---
 
 ## 🚀 快速开始
 
-### 1. 安装依赖
+### 安装
 
 ```bash
 pip install -r requirements.txt
-pip install python-docx  # 简历生成需要
 ```
 
-### 2. 配置 API Key
+### 配置
 
 ```bash
 export MODELSCOPE_API_KEY="your-api-key"
 ```
 
-### 3. 运行
+### 运行
 
 ```bash
-# 查看帮助
-python main.py --help
-python main.py solo --help
-python main.py crew --help
+# Solo: 单 Agent 对话
+python main.py solo --prompt "帮我分析这段代码"
+
+# Crew: 多 Agent 协作生成简历
+python main.py crew --name "张三" --school "清华大学"
 ```
 
-## 📖 使用说明
+---
 
-### Solo 模式（单 Agent）
-
-单 Agent 通过 ReAct 循环处理通用任务。
-
-```bash
-# 基本使用
-python main.py solo --prompt "计算 3*7+2 的结果"
-
-# 生成简历
-python main.py solo --prompt "帮我生成一份简历，我叫张三"
-
-# 调试模式
-python main.py solo --prompt "你好" --debug
-
-# 使用本地 vLLM
-python main.py solo --local --prompt "你好"
-```
-
-**参数说明：**
-
-| 参数 | 说明 |
-|------|------|
-| `--prompt`, `-p` | 用户输入（必填） |
-| `--max_steps`, `-m` | 最大思考轮数（默认 5） |
-| `--output_dir`, `-o` | 输出目录 |
-| `--local` | 使用本地 vLLM |
-| `--debug`, `-d` | 调试模式 |
-
-### Crew 模式（多 Agent 团队）
-
-多个专业 Agent 协作完成任务。
-
-```bash
-# 多 Agent 模式（推荐）
-python main.py crew --name "陈亮江" --school "电子科技大学"
-
-# 自定义样式
-python main.py crew --name "张三" --style professional
-
-# 简单模式（不使用 AI）
-python main.py crew --name "李四" --simple
-```
-
-**当前 Agent 角色：**
-- **ContentAgent** - 内容优化专家
-- **LayoutAgent** - 布局编排专家
-
-**参数说明：**
-
-| 参数 | 默认值 | 说明 |
-|------|--------|------|
-| `--name`, `-n` | 陈亮江 | 姓名 |
-| `--school`, `-s` | 电子科技大学 | 学校 |
-| `--major`, `-m` | 电子信息 | 专业 |
-| `--style` | modern | 样式 (modern/classic/minimal/professional) |
-| `--output_dir`, `-o` | ./output | 输出目录 |
-| `--simple` | - | 简单模式，跳过 AI 优化 |
-| `--debug`, `-d` | - | 调试模式 |
-
-## 🏗️ 架构设计
-
-### 总体架构
+## 🏗️ 架构
 
 ```
-                    ┌─────────────────┐
-                    │    main.py      │
-                    │   (统一入口)     │
-                    └────────┬────────┘
-                             │
-              ┌──────────────┴──────────────┐
-              ▼                             ▼
-    ┌─────────────────┐           ┌─────────────────┐
-    │   Solo 模式      │           │   Crew 模式     │
-    │  (单 Agent)      │           │  (多 Agent)     │
-    └────────┬────────┘           └────────┬────────┘
-             │                             │
-             ▼                             ▼
-    ┌─────────────────┐           ┌─────────────────┐
-    │  core/agent.py  │           │ agents/         │
-    │  Think→Act→Obs  │           │ orchestrator.py │
-    └────────┬────────┘           └────────┬────────┘
-             │                             │
-             ▼                   ┌─────────┴─────────┐
-    ┌─────────────────┐          ▼                   ▼
-    │  ToolRegistry   │   ┌────────────┐     ┌────────────┐
-    │  • Calculator   │   │ Content    │     │ Layout     │
-    │  • Search       │   │ Agent      │     │ Agent      │
-    │  • Resume Gen   │   └────────────┘     └────────────┘
-    └─────────────────┘
+┌────────────────────────────────────────────────────────────────┐
+│                        Orchestrator                            │
+│                     (任务路由 & 协调)                           │
+└───────────────────────────┬────────────────────────────────────┘
+                            │
+            ┌───────────────┼───────────────┐
+            ▼               ▼               ▼
+     ┌────────────┐  ┌────────────┐  ┌────────────┐
+     │ ResumeCrew │  │ CodeCrew   │  │  YourCrew  │
+     │ ┌────────┐ │  │ ┌────────┐ │  │            │
+     │ │Content │ │  │ │Review  │ │  │   ...      │
+     │ │Agent   │ │  │ │Agent   │ │  │            │
+     │ ├────────┤ │  │ ├────────┤ │  │            │
+     │ │Layout  │ │  │ │Fix     │ │  │            │
+     │ │Agent   │ │  │ │Agent   │ │  │            │
+     │ └────────┘ │  │ └────────┘ │  │            │
+     └─────┬──────┘  └────────────┘  └────────────┘
+           │
+           ▼
+┌────────────────────────────────────────────────────────────────┐
+│                     Shared Infrastructure                       │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │ KnowledgeBase│  │ ToolRegistry │  │     LLM      │          │
+│  │    (RAG)     │  │              │  │              │          │
+│  └──────────────┘  └──────────────┘  └──────────────┘          │
+└────────────────────────────────────────────────────────────────┘
 ```
 
-### Crew 模式协作流程
+---
+
+## 📁 项目结构
 
 ```
-原始数据 ──▶ ContentAgent ──▶ LayoutAgent ──▶ 优化结果
-                │                  │
-                │                  │
-                ▼                  ▼
-           • 成就量化          • 章节排序
-           • STAR 重构         • 样式配置
-           • 关键词优化        • 内容精简
+agent/
+├── core/                    # 核心框架
+│   ├── task.py             # Task, TaskResult
+│   ├── orchestrator.py     # 通用协调器
+│   └── knowledge.py        # 知识库接口
+│
+├── agents/                  # Agent 实现
+│   ├── base.py             # Agent 基类
+│   ├── react_agent.py      # Solo 模式
+│   └── crews/              # 多 Agent 团队
+│       ├── base.py         # Crew 基类
+│       └── resume/         # 简历 Crew
+│
+├── knowledge/              # 知识库
+│   └── vector_kb.py        # Milvus 实现
+│
+├── tools/                  # 工具
+├── llm/                    # LLM 接口
+└── main.py                 # CLI 入口
 ```
 
-## 🔧 扩展开发
+---
+
+## 🔧 扩展
+
+### 创建自定义 Crew
+
+```python
+from agents.crews.base import BaseCrew
+from core.task import TaskResult
+
+class MyCustomCrew(BaseCrew):
+    CREW_NAME = "my_task"
+    
+    def _init_agents(self):
+        self.agent_a = MyAgentA(self.llm)
+        self.agent_b = MyAgentB(self.llm)
+        self.agents = [self.agent_a, self.agent_b]
+    
+    def _execute(self, task):
+        # 定义协作流程
+        result_a = self.agent_a.run(task.input_data)
+        result_b = self.agent_b.run(result_a.data)
+        return TaskResult(success=True, output=result_b.data)
+
+# 注册并使用
+orchestrator.register(MyCustomCrew)
+orchestrator.run(Task(name="my_task", input_data={...}))
+```
 
 ### 创建自定义工具
 
@@ -200,71 +213,45 @@ class MyTool(BaseTool):
     def __init__(self):
         super().__init__(
             name="my_tool",
-            description="我的自定义工具",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "param1": {"type": "string", "description": "参数说明"}
-                },
-                "required": ["param1"]
-            }
-        )
-
-    def execute(self, param1: str) -> str:
-        return f"处理结果: {param1}"
-```
-
-### 创建自定义 Agent
-
-```python
-from agents.base import BaseLLMAgent, AgentResult
-
-class MyAgent(BaseLLMAgent):
-    def __init__(self, llm):
-        super().__init__(
-            llm=llm,
-            name="MyAgent",
-            role="自定义专家",
-            system_prompt="你是一个专业的..."
+            description="工具描述",
+            parameters={"type": "object", "properties": {...}}
         )
     
-    def think(self, input_data):
-        # 分析输入
-        return self._call_llm("分析: " + str(input_data))
-    
-    def execute(self, input_data, reasoning):
-        # 执行任务
-        return AgentResult(success=True, data={...})
+    def execute(self, **kwargs) -> str:
+        return "result"
 ```
 
-## 📋 配置说明
+---
 
-### 环境变量
+## 📖 文档
 
-| 变量名 | 说明 | 默认值 |
-|--------|------|--------|
-| `MODELSCOPE_API_KEY` | ModelScope API 密钥 | (必填) |
-| `MODELSCOPE_MODEL` | 模型 ID | `Qwen/Qwen3-32B` |
-| `LOG_LEVEL` | 日志级别 | `INFO` |
-| `AGENT_MAX_ROUNDS` | 最大迭代轮数 | `5` |
+| 文档 | 说明 |
+|------|------|
+| [快速开始](docs/quickstart.md) | 5 分钟上手 |
+| [核心概念](docs/concepts.md) | Task, Agent, Crew, Orchestrator |
+| [API 参考](docs/api.md) | 完整 API 文档 |
+| [示例](examples/) | 完整示例代码 |
 
-### 配置文件
+---
 
-编辑 `configs/config.yaml` 进行详细配置。
+## 🤝 贡献
 
-## 🧪 测试
+欢迎贡献！请查看 [CONTRIBUTING.md](CONTRIBUTING.md)
 
-```bash
-# 运行所有测试
-python -m pytest tests/ -v
+1. Fork 项目
+2. 创建特性分支 (`git checkout -b feature/amazing`)
+3. 提交更改 (`git commit -m 'Add amazing feature'`)
+4. 推送分支 (`git push origin feature/amazing`)
+5. 提交 Pull Request
 
-# 运行特定测试
-python -m pytest tests/test_agents.py -v
-
-# 查看覆盖率
-python -m pytest --cov=.
-```
+---
 
 ## 📄 License
 
-MIT License
+[MIT](LICENSE) © 2024
+
+---
+
+<p align="center">
+  <sub>Built with ❤️ for the AI community</sub>
+</p>

@@ -13,105 +13,13 @@ import json
 
 from agents.base import BaseLLMAgent, AgentResult, LLMProtocol
 from common.logger import get_logger
+from prompts.content import (
+    CONTENT_AGENT_SYSTEM_PROMPT,
+    CONTENT_THINK_PROMPT,
+    CONTENT_EXECUTE_PROMPT,
+)
 
 logger = get_logger(__name__)
-
-
-CONTENT_AGENT_SYSTEM_PROMPT = """你是一位资深的简历优化专家，拥有 15 年人力资源和职业规划经验。
-
-你的核心能力：
-1. **文案优化**: 将平淡的描述改写为有冲击力的成就陈述
-2. **量化成果**: 用数据和指标展示具体贡献（如提升 30%、节省 50 万元）
-3. **STAR 法则**: 用情境-任务-行动-结果的结构重构经历
-4. **关键词优化**: 植入行业关键词，提升 ATS 系统通过率
-5. **差异化定位**: 突出候选人的独特价值和竞争优势
-
-优化原则：
-- 使用强有力的动词开头（主导、设计、优化、推动）
-- 每项经历聚焦 2-3 个核心成就
-- 避免虚词和空洞表述
-- 保持简洁，每条控制在 2 行内
-
-你必须以 JSON 格式返回优化结果。"""
-
-
-CONTENT_THINK_PROMPT = """请分析以下简历内容，识别需要优化的地方：
-
-```json
-{resume_json}
-```
-
-请从以下维度分析：
-1. 个人简介的吸引力和定位清晰度
-2. 工作经历的成就量化程度
-3. 项目描述的技术深度和业务价值
-4. 技能展示的完整性和层次感
-5. 整体内容的差异化竞争力
-
-以 JSON 格式返回分析结果：
-```json
-{{
-    "analysis": {{
-        "summary_score": 1-10,
-        "experience_score": 1-10,
-        "project_score": 1-10,
-        "skills_score": 1-10,
-        "overall_score": 1-10
-    }},
-    "weaknesses": ["问题1", "问题2", ...],
-    "opportunities": ["改进点1", "改进点2", ...],
-    "reasoning": "整体分析..."
-}}
-```"""
-
-
-CONTENT_EXECUTE_PROMPT = """基于以下分析，请优化简历内容：
-
-**原始简历：**
-```json
-{resume_json}
-```
-
-**分析结果：**
-{reasoning}
-
-请按以下要求优化：
-1. **个人简介 (summary)**: 重写为 2-3 句话的价值主张，突出核心竞争力
-2. **工作经历 (experiences)**: 用 STAR 法则重构，每项经历提炼 2-3 条量化成就
-3. **项目经历 (projects)**: 强调技术方案和业务成果
-4. **技能 (skills)**: 按熟练度分层，添加技能水平标签
-
-返回完整的优化后简历 JSON：
-```json
-{{
-    "name": "姓名",
-    "title": "目标职位",
-    "email": "邮箱",
-    "phone": "电话",
-    "summary": "优化后的个人简介...",
-    "education": [...],
-    "experiences": [
-        {{
-            "company": "公司名",
-            "position": "职位",
-            "period": "时间段",
-            "highlights": ["量化成就1", "量化成就2", ...]
-        }}
-    ],
-    "projects": [
-        {{
-            "name": "项目名",
-            "role": "角色",
-            "period": "时间段",
-            "description": "项目描述",
-            "highlights": ["技术亮点1", "业务成果1", ...]
-        }}
-    ],
-    "skills": [
-        {{"name": "技能名", "level": "expert/proficient/familiar"}}
-    ]
-}}
-```"""
 
 
 class ContentAgent(BaseLLMAgent):
