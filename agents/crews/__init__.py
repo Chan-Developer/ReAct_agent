@@ -14,20 +14,12 @@
 from .base import BaseCrew
 
 # 简历 Crew
-from .resume import (
-    ResumeCrew,
-    ContentAgent,
-    LayoutAgent,
-    ResumeOrchestrator,
-)
+from .resume import ResumeCrew, ContentAgent, LayoutAgent
 
 __all__ = [
-    # 基类
     "BaseCrew",
-    # 简历
     "ResumeCrew",
     "ContentAgent",
     "LayoutAgent",
-    "ResumeOrchestrator",
 ]
 

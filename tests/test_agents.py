@@ -166,43 +166,44 @@ class TestLayoutAgent:
 
 
 class TestOrchestrator:
-    """测试 ResumeAgentOrchestrator"""
+    """测试通用 Orchestrator"""
     
     def test_init(self):
         """测试初始化"""
-        from agents import ResumeAgentOrchestrator
+        from core import Orchestrator
+        from agents import ResumeCrew
         
         llm = MockLLM()
-        orchestrator = ResumeAgentOrchestrator(llm)
+        orchestrator = Orchestrator(llm)
+        orchestrator.register(ResumeCrew)
         
-        assert orchestrator.content_agent is not None
-        assert orchestrator.layout_agent is not None
+        assert "resume" in orchestrator.list_crews()
     
-    def test_init_with_disabled_agents(self):
-        """测试禁用部分 Agent"""
-        from agents import ResumeAgentOrchestrator
+    def test_get_crew(self):
+        """测试获取 Crew"""
+        from core import Orchestrator, Task
+        from agents import ResumeCrew
         
         llm = MockLLM()
-        orchestrator = ResumeAgentOrchestrator(
-            llm,
-            enable_content_optimization=False,
-            enable_layout_optimization=True
-        )
+        orchestrator = Orchestrator(llm)
+        orchestrator.register(ResumeCrew)
         
-        assert orchestrator.content_agent is None
-        assert orchestrator.layout_agent is not None
+        crew = orchestrator.get_crew("resume")
+        assert crew is not None
+        assert crew.CREW_NAME == "resume"
     
-    def test_reset(self):
-        """测试重置"""
-        from agents import ResumeAgentOrchestrator
+    def test_crew_not_found(self):
+        """测试找不到 Crew"""
+        from core import Orchestrator, Task
         
         llm = MockLLM()
-        orchestrator = ResumeAgentOrchestrator(llm)
+        orchestrator = Orchestrator(llm)
         
-        orchestrator.execution_logs.append("测试日志")
-        orchestrator.reset()
+        task = Task(name="unknown_task", input_data={})
+        result = orchestrator.run(task)
         
-        assert len(orchestrator.execution_logs) == 0
+        assert result.success is False
+        assert "未找到" in result.error
 
 
 class TestAgentResult:
