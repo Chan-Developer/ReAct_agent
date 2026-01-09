@@ -1,15 +1,6 @@
-<div align="center">
+<h1 align="center">Agent Framework</h1>
 
-```
-     _                    _     _____ 
-    / \   __ _  ___ _ __ | |_  |  ___|
-   / _ \ / _` |/ _ \ '_ \| __| | |_   
-  / ___ \ (_| |  __/ | | | |_  |  _|  
- /_/   \_\__, |\___|_| |_|\__| |_|    
-         |___/                        
-```
-
-**Build AI Agents. Ship Fast.**
+<p align="center"><b>Build AI Agents. Ship Fast.</b></p>
 
 [![Python](https://img.shields.io/badge/Python-3.10+-3776ab?logo=python&logoColor=white)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
