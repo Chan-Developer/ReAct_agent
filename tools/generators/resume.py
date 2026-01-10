@@ -22,7 +22,6 @@ from typing import Any, Dict, List, Optional, Protocol, Type, TYPE_CHECKING
 from ..base import BaseTool
 
 if TYPE_CHECKING:
-    from .resume_optimizer import ResumeOptimizer
     from agents import ResumeAgentOrchestrator
 
 __all__ = ["ResumeGenerator"]
@@ -253,20 +252,20 @@ class ColorScheme:
 
 @dataclass
 class FontConfig:
-    """字体配置 - 紧凑版"""
-    title_size: int = 18        # 姓名标题
-    heading_size: int = 11      # 章节标题
-    subheading_size: int = 10   # 子标题（公司/项目名）
+    """字体配置 - 紧凑版（适合一页简历）"""
+    title_size: int = 16        # 姓名标题（缩小）
+    heading_size: int = 10      # 章节标题（缩小）
+    subheading_size: int = 9    # 子标题（公司/项目名）
     body_size: int = 9          # 正文
     small_size: int = 8         # 小字（时间等）
 
 
 @dataclass
 class SpacingConfig:
-    """间距配置（单位: Pt）- 紧凑版"""
-    margin: float = 0.5         # 页边距（inch）
-    section_gap: int = 6        # 章节间距（Pt）
-    item_gap: int = 2           # 条目间距（Pt）
+    """间距配置（单位: Pt）- 极紧凑版（适合一页简历）"""
+    margin: float = 0.4         # 页边距（inch）- 更窄
+    section_gap: int = 4        # 章节间距（Pt）- 更紧凑
+    item_gap: int = 1           # 条目间距（Pt）- 更紧凑
     line_height: float = 1.0    # 行高
 
 
@@ -932,43 +931,28 @@ class ResumeGenerator(BaseTool):
         self.llm = llm
         self.auto_optimize = auto_optimize
         self.use_multi_agent = use_multi_agent
-        self._optimizer: Optional["ResumeOptimizer"] = None
         self._orchestrator: Optional["ResumeAgentOrchestrator"] = None
         
         os.makedirs(output_dir, exist_ok=True)
         
-        # 延迟初始化优化器/协调器
-        if llm is not None:
-            self._init_optimizer()
+        # 延迟初始化多Agent协调器
+        if llm is not None and use_multi_agent:
+            self._init_orchestrator()
 
-    def _init_optimizer(self) -> None:
-        """初始化优化器或多Agent协调器"""
+    def _init_orchestrator(self) -> None:
+        """初始化多Agent协调器"""
         if self.llm is None:
             return
             
-        if self.use_multi_agent:
-            # 使用多Agent架构
-            try:
-                from agents import ResumeAgentOrchestrator
-                self._orchestrator = ResumeAgentOrchestrator(
-                    llm=self.llm,
-                    enable_content_optimization=True,
-                    enable_layout_optimization=True,
-                )
-            except ImportError:
-                # 回退到单优化器模式
-                self._init_single_optimizer()
-        else:
-            self._init_single_optimizer()
-    
-    def _init_single_optimizer(self) -> None:
-        """初始化单优化器模式"""
-        if self.llm is not None and self._optimizer is None:
-            try:
-                from .resume_optimizer import ResumeOptimizer
-                self._optimizer = ResumeOptimizer(self.llm)
-            except ImportError:
-                pass
+        try:
+            from agents import ResumeAgentOrchestrator
+            self._orchestrator = ResumeAgentOrchestrator(
+                llm=self.llm,
+                enable_content_optimization=True,
+                enable_layout_optimization=True,
+            )
+        except ImportError:
+            pass
 
     def execute(
         self,
@@ -988,36 +972,64 @@ class ResumeGenerator(BaseTool):
         Returns:
             成功或失败的消息
         """
-        # 1. 解析 JSON 数据
-        try:
-            raw_data = json.loads(resume_data) if isinstance(resume_data, str) else resume_data
-        except json.JSONDecodeError as e:
-            return f"❌ JSON 解析失败: {e}"
+        # 1. 解析 JSON 数据（支持 @optimized 引用）
+        import tempfile
+        temp_dir = tempfile.gettempdir()
         
-        # 2. AI 优化（多Agent或单优化器）
+        if isinstance(resume_data, str) and resume_data.strip() == "@optimized":
+            # 使用优化后的数据
+            optimized_file = os.path.join(temp_dir, "optimized_resume.json")
+            if os.path.exists(optimized_file):
+                with open(optimized_file, 'r', encoding='utf-8') as f:
+                    raw_data = json.load(f)
+                print("[ResumeGenerator] 使用优化后的数据")
+            else:
+                return "❌ 未找到优化后的数据，请先调用 content_optimizer"
+        elif isinstance(resume_data, str) and resume_data.strip() == "@layout":
+            # 使用布局设计后的数据
+            layout_file = os.path.join(temp_dir, "layout_resume.json")
+            if os.path.exists(layout_file):
+                with open(layout_file, 'r', encoding='utf-8') as f:
+                    raw_data = json.load(f)
+                print("[ResumeGenerator] 使用布局设计后的数据")
+            else:
+                return "❌ 未找到布局数据，请先调用 layout_designer"
+        else:
+            try:
+                raw_data = json.loads(resume_data) if isinstance(resume_data, str) else resume_data
+            except json.JSONDecodeError as e:
+                return f"❌ JSON 解析失败: {e}. 提示：可以使用 \"@optimized\" 或 \"@layout\" 引用之前处理的数据。"
+        
+        # 2. 提取嵌入的布局配置（由 LayoutDesignerTool 生成）
+        layout_config = raw_data.pop("_layout_config", None)
+        
+        # 3. AI 优化（如果启用且有协调器）
         optimization_result = None
-        layout_config = None
-        
         if optimize and self.auto_optimize:
-            raw_data, optimization_result, layout_config = self._run_optimization(raw_data)
+            raw_data, optimization_result, orchestrator_config = self._run_optimization(raw_data)
+            # 协调器的配置优先级低于嵌入的配置
+            if orchestrator_config and not layout_config:
+                layout_config = orchestrator_config
         
-        # 3. 创建数据模型
+        # 4. 创建数据模型
         try:
             data = ResumeData.from_dict(raw_data)
         except Exception as e:
             return f"❌ 数据解析失败: {type(e).__name__}: {e}"
         
-        # 4. 获取样式配置（优先使用AI推荐的样式）
+        # 5. 获取样式配置（优先使用 LayoutAgent 的配置）
         try:
-            if layout_config and "style" in layout_config:
+            if layout_config:
+                # 使用 LayoutAgent 决定的样式
                 ai_style = layout_config.get("style", template_style)
                 style = StyleConfig.get_style(ai_style)
-            else:
-                style = StyleConfig.get_style(template_style)
-            
-            # 应用 AI 推荐的样式配置
-            if layout_config:
+                # 应用完整的布局配置
                 style = self._apply_layout_config(style, layout_config)
+                print(f"[ResumeGenerator] 使用 LayoutAgent 配置: {ai_style}")
+            else:
+                # 回退到默认样式
+                style = StyleConfig.get_style(template_style)
+                print(f"[ResumeGenerator] 使用默认样式: {template_style}")
                 
         except ValueError:
             style = StyleConfig.get_style("modern")
@@ -1059,7 +1071,7 @@ class ResumeGenerator(BaseTool):
             return f"❌ 生成文档时出错: {type(e).__name__}: {e}"
     
     def _run_optimization(self, raw_data: Dict[str, Any]) -> tuple:
-        """运行优化流程（多Agent或单优化器）
+        """运行多Agent优化流程
         
         Returns:
             (优化后的数据, 优化结果对象, 布局配置)
@@ -1067,7 +1079,6 @@ class ResumeGenerator(BaseTool):
         optimization_result = None
         layout_config = None
         
-        # 优先使用多Agent协调器
         if self._orchestrator:
             try:
                 result = self._orchestrator.optimize(raw_data)
@@ -1077,32 +1088,20 @@ class ResumeGenerator(BaseTool):
                     optimization_result = result
                     print(f"[ResumeGenerator] 多Agent优化完成，耗时 {result.execution_time:.2f}s")
             except Exception as e:
-                print(f"[ResumeGenerator] 多Agent优化失败: {e}，回退到单优化器")
-                # 回退到单优化器
-                raw_data = self._run_single_optimization(raw_data)
-        
-        # 使用单优化器
-        elif self._optimizer:
-            raw_data = self._run_single_optimization(raw_data)
+                print(f"[ResumeGenerator] 多Agent优化失败: {e}")
         
         return raw_data, optimization_result, layout_config
     
-    def _run_single_optimization(self, raw_data: Dict[str, Any]) -> Dict[str, Any]:
-        """运行单优化器优化"""
-        try:
-            raw_data = self._optimizer.optimize(raw_data)
-            
-            if not raw_data.get("summary"):
-                summary = self._optimizer.generate_summary(raw_data)
-                if summary:
-                    raw_data["summary"] = summary
-        except Exception as e:
-            print(f"[ResumeGenerator] 内容优化跳过: {e}")
-        
-        return raw_data
-    
     def _apply_layout_config(self, style: StyleConfig, layout_config: Dict[str, Any]) -> StyleConfig:
-        """应用 AI 推荐的布局配置到样式"""
+        """应用 LayoutAgent 的布局配置到样式
+        
+        Args:
+            style: 基础样式配置
+            layout_config: LayoutAgent 生成的配置，包含：
+                - font_config: 字体配置
+                - spacing_config: 间距配置
+                - visual_elements: 视觉元素开关
+        """
         try:
             # 应用字体配置
             if "font_config" in layout_config:
@@ -1113,6 +1112,10 @@ class ResumeGenerator(BaseTool):
                     style.fonts.heading_size = font_cfg["heading_size"]
                 if "body_size" in font_cfg:
                     style.fonts.body_size = font_cfg["body_size"]
+                if "subheading_size" in font_cfg:
+                    style.fonts.subheading_size = font_cfg["subheading_size"]
+                if "small_size" in font_cfg:
+                    style.fonts.small_size = font_cfg["small_size"]
             
             # 应用间距配置
             if "spacing_config" in layout_config:
@@ -1123,6 +1126,18 @@ class ResumeGenerator(BaseTool):
                     style.spacing.section_gap = spacing_cfg["section_gap"]
                 if "item_gap" in spacing_cfg:
                     style.spacing.item_gap = spacing_cfg["item_gap"]
+                if "line_height" in spacing_cfg:
+                    style.spacing.line_height = spacing_cfg["line_height"]
+            
+            # 应用视觉元素配置
+            if "visual_elements" in layout_config:
+                visual_cfg = layout_config["visual_elements"]
+                if "use_icons" in visual_cfg:
+                    style.show_icons = visual_cfg["use_icons"]
+                if "use_skill_bars" in visual_cfg:
+                    style.show_skill_bars = visual_cfg["use_skill_bars"]
+                if "use_timeline" in visual_cfg:
+                    style.show_timeline = visual_cfg["use_timeline"]
                     
         except Exception as e:
             print(f"[ResumeGenerator] 应用布局配置失败: {e}")

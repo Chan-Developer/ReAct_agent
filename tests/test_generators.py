@@ -3,33 +3,7 @@
 import json
 import os
 import pytest
-from tools.generators import ResumeGenerator, ResumeEnhancer
-
-
-class TestResumeEnhancer:
-    """简历增强器测试"""
-    
-    def test_categorize_skills(self):
-        skills = ["Python", "PyTorch", "机器学习", "Linux"]
-        result = ResumeEnhancer.categorize_skills(skills)
-        
-        assert "编程语言" in result
-        assert "Python" in result["编程语言"]
-    
-    def test_calculate_completeness(self):
-        # 空简历
-        empty = {}
-        assert ResumeEnhancer.calculate_completeness(empty) == 0
-        
-        # 部分填写
-        partial = {"name": "张三", "email": "test@test.com"}
-        assert ResumeEnhancer.calculate_completeness(partial) > 0
-    
-    def test_suggest_improvements(self):
-        data = {"name": "张三"}
-        suggestions = ResumeEnhancer.suggest_improvements(data)
-        
-        assert len(suggestions) > 0
+from tools.generators import ResumeGenerator
 
 
 class TestResumeGenerator:

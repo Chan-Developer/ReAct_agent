@@ -9,7 +9,7 @@ import json
 import sys
 sys.path.insert(0, ".")
 
-from tools.generators import ResumeGenerator, ResumeEnhancer
+from tools.generators import ResumeGenerator
 from llm import ModelScopeOpenAI
 
 
@@ -68,30 +68,8 @@ def main():
         "awards": ["研究生学业奖学金一等奖", "数学建模竞赛省级二等奖"]
     }
     
-    # 2. 本地分析（不需要 LLM）
-    print("\n📊 本地简历分析:")
-    print("-" * 40)
-    
-    # 技能分类
-    categorized = ResumeEnhancer.categorize_skills(resume_data["skills"])
-    print("技能分类:")
-    for cat, skills in categorized.items():
-        print(f"  • {cat}: {', '.join(skills)}")
-    
-    # 完整度
-    completeness = ResumeEnhancer.calculate_completeness(resume_data)
-    print(f"\n简历完整度: {completeness}%")
-    
-    # 改进建议
-    suggestions = ResumeEnhancer.suggest_improvements(resume_data)
-    if suggestions:
-        print("\n改进建议:")
-        for s in suggestions:
-            print(f"  {s}")
-    
-    # 3. 生成简历（需要 LLM）
-    print("\n" + "-" * 40)
-    print("📄 生成简历文档 (含 AI 优化):")
+    # 2. 生成简历
+    print("\n📄 生成简历文档:")
     print("-" * 40)
     
     try:

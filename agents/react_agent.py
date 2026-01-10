@@ -122,7 +122,10 @@ class ReactAgent:
             
             # 解析工具调用
             tool_calls = parse_tool_calls(response)
-
+            
+            if tool_calls is None:
+                logger.debug("未检测到工具调用")
+            
             if tool_calls:
                 self.conversation.add_assistant(content, [
                     {"name": tc.name, "arguments": tc.arguments}
@@ -165,16 +168,23 @@ class ReactAgent:
     def _execute_single_tool(self, name: str, args: dict) -> str:
         """执行单个工具"""
         logger.info(f"执行工具: {name}")
+        logger.debug(f"工具参数: {list(args.keys())}")
         
         tool = self.tool_registry.get(name)
         if tool is None:
             return f"❌ 未找到工具 '{name}'"
         
         try:
-            return tool.execute(**args)
+            result = tool.execute(**args)
+            logger.debug(f"工具结果: {str(result)[:200]}...")
+            return result
         except TypeError as e:
+            logger.error(f"工具参数错误: {e}")
             return f"❌ 参数错误: {e}"
         except Exception as e:
+            logger.error(f"工具执行异常: {type(e).__name__}: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return f"❌ 执行失败: {e}"
 
     def _render_system_prompt(self) -> str:

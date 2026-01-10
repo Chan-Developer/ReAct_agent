@@ -141,28 +141,31 @@ class LayoutAgent(BaseLLMAgent):
             "color_scheme": "professional",
             "font_config": {
                 "family": "Microsoft YaHei",
-                "title_size": 18,
-                "heading_size": 11,
-                "body_size": 9
+                "title_size": 16,          # 紧凑：姓名标题
+                "heading_size": 10,         # 紧凑：章节标题
+                "subheading_size": 9,       # 子标题（公司/项目名）
+                "body_size": 9,             # 正文
+                "small_size": 8,            # 小字（时间等）
             },
             "spacing_config": {
-                "margin": 0.5,
-                "section_gap": 8,
-                "item_gap": 3
+                "margin": 0.4,              # 紧凑：页边距
+                "section_gap": 4,           # 紧凑：章节间距
+                "item_gap": 1,              # 紧凑：条目间距
+                "line_height": 1.0,
             },
             "visual_elements": {
                 "use_icons": True,
                 "use_skill_bars": True,
                 "use_timeline": False,
-                "highlight_keywords": True
+                "highlight_keywords": True,
             },
             "content_limits": {
-                "compact_mode": False,
-                "max_experiences": 4,
-                "max_projects": 3,
-                "max_highlights_per_item": 4
+                "compact_mode": True,       # 启用紧凑模式
+                "max_experiences": 3,
+                "max_projects": 2,
+                "max_highlights_per_item": 3,
             },
-            "design_notes": "默认专业风格配置"
+            "design_notes": "一页紧凑专业风格配置"
         }
     
     def _trim_content(
@@ -231,32 +234,48 @@ class LayoutAgent(BaseLLMAgent):
         return suggestions[:5]
     
     def generate_style_config(self, style_preference: str = "modern") -> Dict[str, Any]:
-        """根据偏好生成样式配置"""
+        """根据偏好生成样式配置（紧凑版，适合一页简历）"""
         style_presets = {
             "modern": {
+                "style": "modern",
                 "color_scheme": "professional",
-                "font_config": {"family": "Microsoft YaHei", "title_size": 18, "heading_size": 11, "body_size": 9},
-                "spacing_config": {"margin": 0.5, "section_gap": 8, "item_gap": 3},
-                "visual_elements": {"use_icons": True, "use_skill_bars": True}
+                "font_config": {
+                    "title_size": 16, "heading_size": 10, "subheading_size": 9,
+                    "body_size": 9, "small_size": 8,
+                },
+                "spacing_config": {"margin": 0.4, "section_gap": 4, "item_gap": 1},
+                "visual_elements": {"use_icons": True, "use_skill_bars": True, "use_timeline": False},
             },
             "classic": {
+                "style": "classic",
                 "color_scheme": "monochrome",
-                "font_config": {"family": "SimSun", "title_size": 16, "heading_size": 12, "body_size": 10},
-                "spacing_config": {"margin": 0.75, "section_gap": 10, "item_gap": 4},
-                "visual_elements": {"use_icons": False, "use_skill_bars": False}
+                "font_config": {
+                    "title_size": 14, "heading_size": 11, "subheading_size": 10,
+                    "body_size": 10, "small_size": 9,
+                },
+                "spacing_config": {"margin": 0.5, "section_gap": 6, "item_gap": 2},
+                "visual_elements": {"use_icons": False, "use_skill_bars": False, "use_timeline": False},
             },
             "minimal": {
+                "style": "minimal",
                 "color_scheme": "elegant",
-                "font_config": {"family": "Microsoft YaHei", "title_size": 16, "heading_size": 10, "body_size": 9},
-                "spacing_config": {"margin": 0.6, "section_gap": 6, "item_gap": 2},
-                "visual_elements": {"use_icons": False, "use_skill_bars": True}
+                "font_config": {
+                    "title_size": 14, "heading_size": 10, "subheading_size": 9,
+                    "body_size": 9, "small_size": 8,
+                },
+                "spacing_config": {"margin": 0.4, "section_gap": 4, "item_gap": 1},
+                "visual_elements": {"use_icons": False, "use_skill_bars": False, "use_timeline": False},
             },
             "creative": {
+                "style": "modern",
                 "color_scheme": "vibrant",
-                "font_config": {"family": "Microsoft YaHei", "title_size": 20, "heading_size": 12, "body_size": 9},
-                "spacing_config": {"margin": 0.5, "section_gap": 10, "item_gap": 4},
-                "visual_elements": {"use_icons": True, "use_skill_bars": True, "use_timeline": True}
-            }
+                "font_config": {
+                    "title_size": 18, "heading_size": 11, "subheading_size": 10,
+                    "body_size": 9, "small_size": 8,
+                },
+                "spacing_config": {"margin": 0.5, "section_gap": 6, "item_gap": 2},
+                "visual_elements": {"use_icons": True, "use_skill_bars": True, "use_timeline": True},
+            },
         }
         
         return style_presets.get(style_preference, style_presets["modern"])

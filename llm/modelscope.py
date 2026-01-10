@@ -10,7 +10,9 @@ from typing import Any, Dict, Generator, List, Optional
 from openai import OpenAI
 
 from .base import BaseLLM
-from common import get_config
+from common import get_config, get_logger
+
+logger = get_logger(__name__)
 
 
 class ModelScopeOpenAI(BaseLLM):
@@ -72,7 +74,7 @@ class ModelScopeOpenAI(BaseLLM):
         self,
         messages: List[Dict[str, Any]],
         temperature: float = 0.7,
-        max_tokens: int = 1024,
+        max_tokens: int = 4096,
         stream: bool = False,
         enable_thinking: bool = False,
         **kwargs,
@@ -82,7 +84,7 @@ class ModelScopeOpenAI(BaseLLM):
         Args:
             messages: OpenAI 风格的消息列表
             temperature: 采样温度
-            max_tokens: 最大生成 token 数
+            max_tokens: 最大生成 token 数（默认 4096，适合生成长 JSON）
             stream: 是否启用流式输出
             enable_thinking: 是否启用思考模式（仅流式支持）
             **kwargs: 其他参数
@@ -113,9 +115,23 @@ class ModelScopeOpenAI(BaseLLM):
                 # 流式模式返回迭代器
                 return response
             
+            # 记录 token 使用情况
+            usage = getattr(response, 'usage', None)
+            if usage:
+                logger.info(
+                    f"[Token Usage] input: {usage.prompt_tokens}, "
+                    f"output: {usage.completion_tokens}, "
+                    f"total: {usage.total_tokens}"
+                )
+            
             return {
                 "role": "assistant",
                 "content": response.choices[0].message.content,
+                "usage": {
+                    "prompt_tokens": usage.prompt_tokens if usage else 0,
+                    "completion_tokens": usage.completion_tokens if usage else 0,
+                    "total_tokens": usage.total_tokens if usage else 0,
+                } if usage else None,
             }
             
         except Exception as err:
@@ -125,7 +141,7 @@ class ModelScopeOpenAI(BaseLLM):
         self,
         messages: List[Dict[str, Any]],
         temperature: float = 0.7,
-        max_tokens: int = 1024,
+        max_tokens: int = 4096,
         enable_thinking: bool = False,
         **kwargs,
     ) -> Generator[str, None, None]:

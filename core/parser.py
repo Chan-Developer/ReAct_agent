@@ -74,16 +74,26 @@ def _parse_json_call(json_str: str) -> Optional[List[ToolCall]]:
     try:
         data = json.loads(json_str)
         if "name" not in data:
+            logger.warning("JSON 中没有 'name' 字段")
             return None
         
         args = data.get("arguments", {})
         if isinstance(args, str):
-            args = json.loads(args)
+            try:
+                args = json.loads(args)
+            except json.JSONDecodeError as e:
+                logger.warning(f"arguments 内部 JSON 解析失败: {e}")
+                logger.warning(f"arguments 内容前200字符: {args[:200]}")
+                return None
         
         logger.debug(f"解析到工具调用: {data['name']}")
         return [ToolCall(name=data["name"], arguments=args)]
+    except json.JSONDecodeError as e:
+        logger.warning(f"外层 JSON 解析失败: {e}")
+        logger.warning(f"JSON 字符串前200字符: {json_str[:200]}")
+        return None
     except Exception as e:
-        logger.warning(f"JSON 解析失败: {e}")
+        logger.warning(f"解析异常: {type(e).__name__}: {e}")
         return None
 
 
