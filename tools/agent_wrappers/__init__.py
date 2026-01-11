@@ -5,10 +5,11 @@
 保留 Agent 内部的 Think-Execute-Reflect 完整流程。
 
 使用方式:
-    from tools.agents import ContentOptimizerTool, LayoutDesignerTool
+    from tools.agent_wrappers import ContentOptimizerTool, LayoutDesignerTool, StyleSelectorTool
     
     tools = [
         ContentOptimizerTool(llm),
+        StyleSelectorTool(llm),  # 新增：模板选择
         LayoutDesignerTool(llm),
         ResumeGenerator(output_dir="./output"),
     ]
@@ -16,8 +17,10 @@
 """
 from .content_optimizer import ContentOptimizerTool
 from .layout_designer import LayoutDesignerTool
+from .style_selector import StyleSelectorTool
 
 __all__ = [
     "ContentOptimizerTool",
     "LayoutDesignerTool",
+    "StyleSelectorTool",
 ]

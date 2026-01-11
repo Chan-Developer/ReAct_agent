@@ -1,0 +1,38 @@
+{
+  "name": "fresh_graduate",
+  "display_name": "应届生/实习",
+  "description": "适合应届毕业生或实习生，突出教育背景和项目经验",
+  "tags": ["应届生", "实习", "校招", "学生"],
+  "job_keywords": ["实习", "应届", "校招", "毕业", "学生", "培训生"],
+  "page_preference": "one_page",
+  "section_order": ["header", "summary", "education", "projects", "experience", "skills"],
+  "section_weights": {
+    "education": 1.3,
+    "projects": 1.2,
+    "experience": 0.9,
+    "skills": 1.0
+  },
+  "style": "modern",
+  "color_scheme": "professional",
+  "font_config": {
+    "title_size": 16,
+    "heading_size": 10,
+    "subheading_size": 9,
+    "body_size": 9,
+    "small_size": 8
+  },
+  "spacing_config": {
+    "margin": 0.4,
+    "section_gap": 4,
+    "item_gap": 1,
+    "line_height": 1.0
+  },
+  "use_icons": true,
+  "use_skill_bars": false,
+  "use_timeline": false,
+  "highlight_keywords": true,
+  "max_experiences": 2,
+  "max_projects": 3,
+  "max_highlights_per_item": 4,
+  "max_skills": 15
+}

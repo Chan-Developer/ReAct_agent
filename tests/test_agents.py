@@ -165,47 +165,6 @@ class TestLayoutAgent:
         assert len(trimmed["experiences"][0]["highlights"]) == 4
 
 
-class TestOrchestrator:
-    """测试通用 Orchestrator"""
-    
-    def test_init(self):
-        """测试初始化"""
-        from core import Orchestrator
-        from agents import ResumeCrew
-        
-        llm = MockLLM()
-        orchestrator = Orchestrator(llm)
-        orchestrator.register(ResumeCrew)
-        
-        assert "resume" in orchestrator.list_crews()
-    
-    def test_get_crew(self):
-        """测试获取 Crew"""
-        from core import Orchestrator, Task
-        from agents import ResumeCrew
-        
-        llm = MockLLM()
-        orchestrator = Orchestrator(llm)
-        orchestrator.register(ResumeCrew)
-        
-        crew = orchestrator.get_crew("resume")
-        assert crew is not None
-        assert crew.CREW_NAME == "resume"
-    
-    def test_crew_not_found(self):
-        """测试找不到 Crew"""
-        from core import Orchestrator, Task
-        
-        llm = MockLLM()
-        orchestrator = Orchestrator(llm)
-        
-        task = Task(name="unknown_task", input_data={})
-        result = orchestrator.run(task)
-        
-        assert result.success is False
-        assert "未找到" in result.error
-
-
 class TestAgentResult:
     """测试 AgentResult"""
     

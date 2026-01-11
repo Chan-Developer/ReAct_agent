@@ -1,0 +1,38 @@
+{
+  "name": "tech_modern",
+  "display_name": "技术岗-现代风格",
+  "description": "适合互联网/科技公司的技术岗位，突出项目经验和技术栈",
+  "tags": ["技术", "互联网", "IT", "开发"],
+  "job_keywords": ["工程师", "开发", "架构", "后端", "前端", "全栈", "算法", "数据", "Python", "Java", "Go", "AI", "机器学习"],
+  "page_preference": "one_page",
+  "section_order": ["header", "summary", "experience", "projects", "skills", "education"],
+  "section_weights": {
+    "projects": 1.2,
+    "skills": 1.0,
+    "experience": 1.0,
+    "education": 0.8
+  },
+  "style": "modern",
+  "color_scheme": "professional",
+  "font_config": {
+    "title_size": 16,
+    "heading_size": 10,
+    "subheading_size": 9,
+    "body_size": 9,
+    "small_size": 8
+  },
+  "spacing_config": {
+    "margin": 0.4,
+    "section_gap": 4,
+    "item_gap": 1,
+    "line_height": 1.0
+  },
+  "use_icons": true,
+  "use_skill_bars": false,
+  "use_timeline": false,
+  "highlight_keywords": true,
+  "max_experiences": 3,
+  "max_projects": 3,
+  "max_highlights_per_item": 4,
+  "max_skills": 15
+}

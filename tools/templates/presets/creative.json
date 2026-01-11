@@ -1,0 +1,38 @@
+{
+  "name": "creative",
+  "display_name": "设计/创意岗",
+  "description": "适合UI设计师、交互设计师、创意策划等岗位",
+  "tags": ["设计", "创意", "UI", "UX", "视觉"],
+  "job_keywords": ["设计师", "UI", "UX", "交互", "视觉", "创意", "美术", "平面", "品牌"],
+  "page_preference": "one_page",
+  "section_order": ["header", "summary", "projects", "experience", "skills", "education"],
+  "section_weights": {
+    "projects": 1.5,
+    "experience": 1.0,
+    "skills": 0.9,
+    "education": 0.6
+  },
+  "style": "minimal",
+  "color_scheme": "elegant",
+  "font_config": {
+    "title_size": 18,
+    "heading_size": 11,
+    "subheading_size": 10,
+    "body_size": 9,
+    "small_size": 8
+  },
+  "spacing_config": {
+    "margin": 0.5,
+    "section_gap": 6,
+    "item_gap": 2,
+    "line_height": 1.2
+  },
+  "use_icons": true,
+  "use_skill_bars": true,
+  "use_timeline": false,
+  "highlight_keywords": false,
+  "max_experiences": 3,
+  "max_projects": 4,
+  "max_highlights_per_item": 3,
+  "max_skills": 12
+}

@@ -1,22 +1,18 @@
 # -*- coding: utf-8 -*-
-"""简历优化 Crew。
+"""简历专家 Agent。
 
 使用方式:
-    from core import Orchestrator, Task
-    from agents.crews.resume import ResumeCrew
+    from workflows import ResumePipeline
     
-    orchestrator = Orchestrator(llm)
-    orchestrator.register(ResumeCrew)
-    result = orchestrator.run(Task(name="resume", input_data=data))
+    pipeline = ResumePipeline(llm)
+    result = pipeline.run(input_data=resume_data, job_description="...")
 """
 
 from .content_agent import ContentAgent
 from .layout_agent import LayoutAgent
-from .crew import ResumeCrew
 
 __all__ = [
     "ContentAgent",
     "LayoutAgent",
-    "ResumeCrew",
 ]
 

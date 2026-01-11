@@ -1,24 +1,17 @@
 # -*- coding: utf-8 -*-
-"""Crew 模块。
+"""专家 Agent 模块。
 
-通用框架：
-- BaseCrew: Crew 基类
+简历专家:
+- ContentAgent: 内容优化专家
+- LayoutAgent: 布局设计专家
 
-已实现的团队：
-- ResumeCrew: 简历优化
-
-扩展方式：继承 BaseCrew，实现 _init_agents() 和 _execute()
+使用方式: 通过 workflows.ResumePipeline 调用
 """
 
-# 基类
-from .base import BaseCrew
-
-# 简历 Crew
-from .resume import ResumeCrew, ContentAgent, LayoutAgent
+# 简历专家
+from .resume import ContentAgent, LayoutAgent
 
 __all__ = [
-    "BaseCrew",
-    "ResumeCrew",
     "ContentAgent",
     "LayoutAgent",
 ]

@@ -16,7 +16,6 @@ import os
 import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Any, Dict, List, Optional, Protocol, Type, TYPE_CHECKING
 
 from ..base import BaseTool
@@ -67,14 +66,6 @@ class Project:
 
 
 @dataclass
-class SkillLevel:
-    """带等级的技能"""
-    name: str
-    level: int = 80  # 1-100 百分比
-    category: str = ""  # 如：编程语言、框架、工具
-
-
-@dataclass
 class ResumeData:
     """简历数据模型 (增强版)"""
     # 基本信息
@@ -94,9 +85,8 @@ class ResumeData:
     experience: List[Experience] = field(default_factory=list)
     projects: List[Project] = field(default_factory=list)
     
-    # 技能 (增强)
+    # 技能
     skills: List[str] = field(default_factory=list)
-    skill_levels: List[SkillLevel] = field(default_factory=list)
     
     # 附加信息 (新增)
     certificates: List[str] = field(default_factory=list)  # 证书
@@ -148,16 +138,6 @@ class ResumeData:
                     tech_stack=proj.get("tech_stack", []),
                 ))
         
-        # 解析技能等级
-        skill_levels = []
-        for skill in data.get("skill_levels", []):
-            if isinstance(skill, dict):
-                skill_levels.append(SkillLevel(
-                    name=skill.get("name", ""),
-                    level=skill.get("level", 80),
-                    category=skill.get("category", ""),
-                ))
-        
         # 解析 skills 列表（兼容字符串和 dict 格式）
         raw_skills = data.get("skills", [])
         skills_list = []
@@ -165,22 +145,9 @@ class ResumeData:
             if isinstance(skill, str):
                 skills_list.append(skill)
             elif isinstance(skill, dict):
-                # 如果是 dict，提取 name 并添加到 skill_levels
                 skill_name = skill.get("name", "")
                 if skill_name:
                     skills_list.append(skill_name)
-                    # 同时添加到 skill_levels（如果有 level）
-                    if "level" in skill:
-                        level_val = skill.get("level", 80)
-                        # 处理 level 可能是字符串的情况
-                        if isinstance(level_val, str):
-                            level_map = {"expert": 95, "proficient": 80, "familiar": 60}
-                            level_val = level_map.get(level_val.lower(), 70)
-                        skill_levels.append(SkillLevel(
-                            name=skill_name,
-                            level=level_val,
-                            category=skill.get("category", ""),
-                        ))
         
         return cls(
             name=data.get("name", ""),
@@ -195,7 +162,6 @@ class ResumeData:
             experience=experience_list,
             projects=project_list,
             skills=skills_list,
-            skill_levels=skill_levels,
             certificates=data.get("certificates", []),
             awards=data.get("awards", []),
             languages=data.get("languages", []),
@@ -231,14 +197,6 @@ class ResumeData:
 # 样式配置 (增强版)
 # =============================================================================
 
-class TemplateStyle(str, Enum):
-    """模板样式枚举"""
-    CLASSIC = "classic"      # 经典：蓝色主题，传统布局
-    MODERN = "modern"        # 现代：扁平化设计
-    MINIMAL = "minimal"      # 简约：黑白为主
-    PROFESSIONAL = "professional"  # 专业：双栏布局 (新增)
-
-
 @dataclass
 class ColorScheme:
     """颜色方案 - 统一黑色字体"""
@@ -271,58 +229,16 @@ class SpacingConfig:
 
 @dataclass
 class StyleConfig:
-    """完整样式配置"""
-    colors: ColorScheme
-    fonts: FontConfig
-    spacing: SpacingConfig
-    show_skill_bars: bool = True   # 是否显示技能进度条
-    show_icons: bool = True        # 是否显示图标
-    show_timeline: bool = False    # 是否显示时间轴
+    """样式配置（由 LayoutAgent 动态决定）"""
+    colors: ColorScheme = field(default_factory=ColorScheme)
+    fonts: FontConfig = field(default_factory=FontConfig)
+    spacing: SpacingConfig = field(default_factory=SpacingConfig)
+    show_timeline: bool = False
 
     @classmethod
-    def get_style(cls, style: TemplateStyle | str) -> "StyleConfig":
-        """获取预定义样式配置"""
-        if isinstance(style, str):
-            try:
-                style = TemplateStyle(style)
-            except ValueError:
-                style = TemplateStyle.CLASSIC
-        
-        # 统一使用黑色字体
-        black_colors = ColorScheme()  # 使用默认值（全黑）
-        
-        styles = {
-            TemplateStyle.CLASSIC: cls(
-                colors=black_colors,
-                fonts=FontConfig(),
-                spacing=SpacingConfig(),
-                show_skill_bars=True,
-                show_icons=True,
-            ),
-            TemplateStyle.MODERN: cls(
-                colors=black_colors,
-                fonts=FontConfig(),
-                spacing=SpacingConfig(),
-                show_skill_bars=True,
-                show_icons=True,
-            ),
-            TemplateStyle.MINIMAL: cls(
-                colors=black_colors,
-                fonts=FontConfig(),
-                spacing=SpacingConfig(),
-                show_skill_bars=False,
-                show_icons=False,
-            ),
-            TemplateStyle.PROFESSIONAL: cls(
-                colors=black_colors,
-                fonts=FontConfig(),
-                spacing=SpacingConfig(),
-                show_skill_bars=True,
-                show_icons=True,
-            ),
-        }
-        
-        return styles.get(style, styles[TemplateStyle.CLASSIC])
+    def get_style(cls, style: str = "default") -> "StyleConfig":
+        """获取基础样式配置（作为 AI 配置的基础）"""
+        return cls()
 
 
 # =============================================================================
@@ -488,12 +404,6 @@ class DocxGenerator(BaseDocumentGenerator):
         p = doc.add_paragraph()
         p.paragraph_format.space_before = Pt(self.style.spacing.section_gap)
         p.paragraph_format.space_after = Pt(2)
-        
-        # 色块标记 + 标题
-        if self.style.show_icons:
-            run = p.add_run("▌")
-            run.font.size = Pt(self.style.fonts.heading_size)
-            run.font.color.rgb = self._hex_to_rgb(self.style.colors.accent)
         
         run = p.add_run(title)
         run.bold = True
@@ -706,19 +616,14 @@ class DocxGenerator(BaseDocumentGenerator):
                 run.font.color.rgb = self._hex_to_rgb(self.style.colors.text)
 
     def _add_skills(self, doc, data: ResumeData) -> None:
-        """添加专业技能 - 紧凑版"""
-        if not data.skills and not data.skill_levels:
+        """添加专业技能"""
+        if not data.skills:
             return
             
         from docx.shared import Pt
         
         self._add_section_heading(doc, "专业技能")
         
-        # 技能进度条（如果有等级）
-        if data.skill_levels and self.style.show_skill_bars:
-            self._add_skill_bars(doc, data.skill_levels)
-        
-        # 普通技能列表（一行显示）
         if data.skills:
             p = doc.add_paragraph()
             p.paragraph_format.space_before = Pt(2)
@@ -727,59 +632,6 @@ class DocxGenerator(BaseDocumentGenerator):
             run = p.add_run(" | ".join(data.skills))
             run.font.size = Pt(self.style.fonts.body_size)
             run.font.color.rgb = self._hex_to_rgb(self.style.colors.text)
-
-    def _add_skill_bars(self, doc, skill_levels: List[SkillLevel]) -> None:
-        """添加技能进度条 - 紧凑版"""
-        from docx.shared import Pt, Inches
-        from docx.enum.table import WD_TABLE_ALIGNMENT
-        
-        # 两列布局
-        cols = 2
-        rows = (len(skill_levels) + 1) // cols
-        
-        table = doc.add_table(rows=rows, cols=cols * 2)
-        table.alignment = WD_TABLE_ALIGNMENT.CENTER
-        
-        for i, skill in enumerate(skill_levels):
-            row_idx = i // cols
-            col_offset = (i % cols) * 2
-            
-            if row_idx >= rows:
-                break
-            
-            row = table.rows[row_idx]
-            
-            # 技能名称
-            cell1 = row.cells[col_offset]
-            cell1.width = Inches(0.8)
-            p = cell1.paragraphs[0]
-            p.paragraph_format.space_before = Pt(0)
-            p.paragraph_format.space_after = Pt(0)
-            run = p.add_run(skill.name)
-            run.font.size = Pt(self.style.fonts.small_size)
-            run.font.color.rgb = self._hex_to_rgb(self.style.colors.text)
-            
-            # 进度条
-            cell2 = row.cells[col_offset + 1]
-            cell2.width = Inches(2.5)
-            p = cell2.paragraphs[0]
-            p.paragraph_format.space_before = Pt(0)
-            p.paragraph_format.space_after = Pt(0)
-            
-            filled = int(skill.level / 10)
-            empty = 10 - filled
-            
-            run = p.add_run("█" * filled)
-            run.font.size = Pt(8)
-            run.font.color.rgb = self._hex_to_rgb(self.style.colors.accent)
-            
-            run = p.add_run("░" * empty)
-            run.font.size = Pt(8)
-            run.font.color.rgb = self._hex_to_rgb("#d0d0d0")
-            
-            run = p.add_run(f" {skill.level}%")
-            run.font.size = Pt(self.style.fonts.small_size)
-            run.font.color.rgb = self._hex_to_rgb(self.style.colors.secondary)
 
     def _add_certificates(self, doc, data: ResumeData) -> None:
         """添加证书资质 - 紧凑版"""
@@ -880,7 +732,6 @@ class ResumeGenerator(BaseTool):
         {"name": "项目名", "role": "角色", "description": "项目描述", "highlights": ["亮点1"], "tech_stack": ["技术栈"]}
     ],
     "skills": ["技能1", "技能2"],
-    "skill_levels": [{"name": "Python", "level": 90}],
     "certificates": ["证书1"],
     "awards": ["奖项1"]
 }"""
@@ -902,26 +753,34 @@ class ResumeGenerator(BaseTool):
         """
         super().__init__(
             name="generate_resume",
-            description="生成 Word 格式的专业简历文档。可自动优化内容，让简历更加专业。",
+            description="生成 Word 格式的专业简历文档。支持模板选择和智能分页。",
             parameters={
                 "type": "object",
                 "properties": {
                     "resume_data": {
                         "type": "string",
-                        "description": self.RESUME_DATA_SCHEMA,
+                        "description": "JSON 简历数据，或使用 @layout/@optimized/@original 引用",
                     },
                     "filename": {
                         "type": "string",
                         "description": "输出文件名（不含扩展名）",
+                        "default": "resume",
                     },
-                    "template_style": {
+                    "template": {
                         "type": "string",
-                        "description": "模板样式: 'classic'(经典), 'modern'(现代), 'minimal'(简约), 'professional'(专业)",
-                        "enum": ["classic", "modern", "minimal", "professional"],
+                        "description": "模板名称或 @selected 使用已选模板",
+                        "default": "",
+                    },
+                    "page_preference": {
+                        "type": "string",
+                        "description": "页面偏好: one_page(尽量一页), two_pages, auto(自动)",
+                        "enum": ["one_page", "two_pages", "auto"],
+                        "default": "auto",
                     },
                     "optimize": {
                         "type": "boolean",
                         "description": "是否使用AI优化简历内容（默认开启）",
+                        "default": True,
                     },
                 },
                 "required": ["resume_data"],
@@ -958,83 +817,69 @@ class ResumeGenerator(BaseTool):
         self,
         resume_data: str,
         filename: str = "resume",
-        template_style: str = "modern",
         optimize: bool = True,
+        template: str = "",
+        page_preference: str = "auto",
+        **kwargs,  # 兼容旧参数（如 template_style）
     ) -> str:
         """生成简历文档。
         
         Args:
-            resume_data: JSON 格式的简历数据
+            resume_data: JSON 格式的简历数据，或 "@layout"/"@optimized" 引用
             filename: 输出文件名
-            template_style: 模板样式
             optimize: 是否优化内容
+            template: 模板名称或 "@selected" 使用已选模板
+            page_preference: 页面偏好 ("one_page", "two_pages", "auto")
             
         Returns:
             成功或失败的消息
         """
-        # 1. 解析 JSON 数据（支持 @optimized 引用）
         import tempfile
         temp_dir = tempfile.gettempdir()
         
-        if isinstance(resume_data, str) and resume_data.strip() == "@optimized":
-            # 使用优化后的数据
-            optimized_file = os.path.join(temp_dir, "optimized_resume.json")
-            if os.path.exists(optimized_file):
-                with open(optimized_file, 'r', encoding='utf-8') as f:
-                    raw_data = json.load(f)
-                print("[ResumeGenerator] 使用优化后的数据")
-            else:
-                return "❌ 未找到优化后的数据，请先调用 content_optimizer"
-        elif isinstance(resume_data, str) and resume_data.strip() == "@layout":
-            # 使用布局设计后的数据
-            layout_file = os.path.join(temp_dir, "layout_resume.json")
-            if os.path.exists(layout_file):
-                with open(layout_file, 'r', encoding='utf-8') as f:
-                    raw_data = json.load(f)
-                print("[ResumeGenerator] 使用布局设计后的数据")
-            else:
-                return "❌ 未找到布局数据，请先调用 layout_designer"
-        else:
-            try:
-                raw_data = json.loads(resume_data) if isinstance(resume_data, str) else resume_data
-            except json.JSONDecodeError as e:
-                return f"❌ JSON 解析失败: {e}. 提示：可以使用 \"@optimized\" 或 \"@layout\" 引用之前处理的数据。"
+        # 1. 加载简历数据
+        raw_data, error = self._load_resume_data(resume_data, temp_dir)
+        if error:
+            return error
         
-        # 2. 提取嵌入的布局配置（由 LayoutDesignerTool 生成）
+        # 2. 提取嵌入的布局配置
         layout_config = raw_data.pop("_layout_config", None)
         
-        # 3. AI 优化（如果启用且有协调器）
+        # 3. 加载模板配置（如果指定）
+        template_config = self._load_template_config(template, temp_dir)
+        if template_config and not layout_config:
+            layout_config = template_config
+            print("[ResumeGenerator] 使用模板配置")
+        
+        # 4. AI 优化（如果启用且有协调器）
         optimization_result = None
         if optimize and self.auto_optimize:
             raw_data, optimization_result, orchestrator_config = self._run_optimization(raw_data)
-            # 协调器的配置优先级低于嵌入的配置
             if orchestrator_config and not layout_config:
                 layout_config = orchestrator_config
         
-        # 4. 创建数据模型
+        # 5. 智能分页优化
+        page_notes = ""
+        if page_preference != "auto" or self._should_optimize_pages(raw_data, layout_config or {}):
+            raw_data, layout_config, page_notes = self._optimize_for_pages(
+                raw_data, layout_config or {}, page_preference
+            )
+        
+        # 6. 创建数据模型
         try:
             data = ResumeData.from_dict(raw_data)
         except Exception as e:
             return f"❌ 数据解析失败: {type(e).__name__}: {e}"
         
-        # 5. 获取样式配置（优先使用 LayoutAgent 的配置）
-        try:
-            if layout_config:
-                # 使用 LayoutAgent 决定的样式
-                ai_style = layout_config.get("style", template_style)
-                style = StyleConfig.get_style(ai_style)
-                # 应用完整的布局配置
-                style = self._apply_layout_config(style, layout_config)
-                print(f"[ResumeGenerator] 使用 LayoutAgent 配置: {ai_style}")
-            else:
-                # 回退到默认样式
-                style = StyleConfig.get_style(template_style)
-                print(f"[ResumeGenerator] 使用默认样式: {template_style}")
-                
-        except ValueError:
-            style = StyleConfig.get_style("modern")
+        # 7. 获取样式配置
+        style = StyleConfig()
+        if layout_config:
+            style = self._apply_layout_config(style, layout_config)
+            print("[ResumeGenerator] 使用布局配置")
+        else:
+            print("[ResumeGenerator] 使用默认样式")
         
-        # 5. 生成文档
+        # 8. 生成文档
         try:
             output_path = os.path.join(self.output_dir, f"{filename}.docx")
             generator = DocumentGeneratorFactory.create("docx", style)
@@ -1044,22 +889,30 @@ class ResumeGenerator(BaseTool):
                 abs_path = os.path.abspath(output_path)
                 
                 # 构建返回消息
+                extra_info = []
+                
                 if optimization_result and optimization_result.success:
                     mode = "多Agent" if self._orchestrator else "AI"
-                    optimized_msg = f" (已{mode}优化)"
+                    extra_info.append(f"已{mode}优化")
+                
+                if template_config:
+                    extra_info.append("已应用模板")
+                
+                if page_notes:
+                    extra_info.append(page_notes)
+                
+                extra_str = f" ({', '.join(extra_info)})" if extra_info else ""
+                
+                suggestion_text = ""
+                if optimization_result and optimization_result.success:
                     suggestions = optimization_result.content_suggestions + optimization_result.layout_suggestions
-                    suggestion_text = ""
                     if suggestions:
                         suggestion_text = "\n💡 优化建议:\n" + "\n".join(f"  • {s}" for s in suggestions[:3])
-                else:
-                    optimized_msg = ""
-                    suggestion_text = ""
                 
                 return (
-                    f"✅ 简历已成功生成{optimized_msg}!\n"
+                    f"✅ 简历已成功生成{extra_str}!\n"
                     f"📄 文件路径: {abs_path}\n"
-                    f"📋 格式: DOCX\n"
-                    f"🎨 样式: {template_style}"
+                    f"📋 格式: DOCX"
                     f"{suggestion_text}"
                 )
             return "❌ 文档生成失败"
@@ -1069,6 +922,81 @@ class ResumeGenerator(BaseTool):
             return f"❌ 缺少依赖包: {missing_pkg}\n请运行: pip install python-docx"
         except Exception as e:
             return f"❌ 生成文档时出错: {type(e).__name__}: {e}"
+    
+    def _load_resume_data(self, resume_data: str, temp_dir: str) -> tuple:
+        """加载简历数据"""
+        ref = resume_data.strip() if isinstance(resume_data, str) else ""
+        
+        ref_map = {
+            "@layout": ("layout_resume.json", "布局设计后的"),
+            "@optimized": ("optimized_resume.json", "优化后的"),
+            "@original": ("original_resume.json", "原始"),
+        }
+        
+        if ref in ref_map:
+            filename, desc = ref_map[ref]
+            filepath = os.path.join(temp_dir, filename)
+            if os.path.exists(filepath):
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    print(f"[ResumeGenerator] 使用{desc}数据")
+                    return json.load(f), None
+            else:
+                return None, f"❌ 未找到{desc}数据"
+        
+        try:
+            return json.loads(resume_data) if isinstance(resume_data, str) else resume_data, None
+        except json.JSONDecodeError as e:
+            return None, f"❌ JSON 解析失败: {e}. 提示：可以使用 \"@layout\" 引用布局后的数据。"
+    
+    def _load_template_config(self, template: str, temp_dir: str) -> Optional[Dict[str, Any]]:
+        """加载模板配置"""
+        if not template:
+            return None
+        
+        if template.strip() == "@selected":
+            layout_file = os.path.join(temp_dir, "template_layout.json")
+            if os.path.exists(layout_file):
+                with open(layout_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+        else:
+            try:
+                from tools.templates import get_registry
+                registry = get_registry()
+                config = registry.get(template)
+                if config:
+                    return config.to_layout_config()
+            except Exception as e:
+                print(f"[ResumeGenerator] 加载模板失败: {e}")
+        
+        return None
+    
+    def _should_optimize_pages(self, raw_data: Dict, layout_config: Dict) -> bool:
+        """判断是否需要分页优化"""
+        try:
+            from .pagination import ContentEstimator
+            estimator = ContentEstimator()
+            pages = estimator.estimate_pages(raw_data, layout_config)
+            return pages > 1.1
+        except Exception:
+            return False
+    
+    def _optimize_for_pages(
+        self,
+        raw_data: Dict,
+        layout_config: Dict,
+        page_preference: str,
+    ) -> tuple:
+        """执行分页优化"""
+        try:
+            from .pagination import LayoutOptimizer
+            optimizer = LayoutOptimizer()
+            data, style, notes = optimizer.optimize_for_pages(
+                raw_data, layout_config, target=page_preference
+            )
+            return data, style, notes
+        except Exception as e:
+            print(f"[ResumeGenerator] 分页优化失败: {e}")
+            return raw_data, layout_config, ""
     
     def _run_optimization(self, raw_data: Dict[str, Any]) -> tuple:
         """运行多Agent优化流程
@@ -1132,10 +1060,6 @@ class ResumeGenerator(BaseTool):
             # 应用视觉元素配置
             if "visual_elements" in layout_config:
                 visual_cfg = layout_config["visual_elements"]
-                if "use_icons" in visual_cfg:
-                    style.show_icons = visual_cfg["use_icons"]
-                if "use_skill_bars" in visual_cfg:
-                    style.show_skill_bars = visual_cfg["use_skill_bars"]
                 if "use_timeline" in visual_cfg:
                     style.show_timeline = visual_cfg["use_timeline"]
                     

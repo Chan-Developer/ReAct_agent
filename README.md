@@ -11,6 +11,7 @@
 <p align="center">
   <a href="#quick-start">Quick Start</a> •
   <a href="#modes">运行模式</a> •
+  <a href="#features">Features</a> •
   <a href="#architecture">Architecture</a> •
   <a href="#roadmap">Roadmap</a>
 </p>
@@ -22,10 +23,10 @@
 写 Agent 不该比写业务代码还复杂。三行代码，跑起来再说。
 
 ```python
-from agent import ReactAgent
+from workflows import ResumePipeline
 
-agent = ReactAgent(llm, tools=[content_optimizer, layout_designer, generate_resume])
-result = agent.run("请优化简历并生成 Word 文档")  # Done.
+pipeline = ResumePipeline(llm)
+result = pipeline.run(resume_data, job_description="招聘Python工程师...")  # Done.
 ```
 
 ---
@@ -35,55 +36,141 @@ result = agent.run("请优化简历并生成 Word 文档")  # Done.
 ```bash
 pip install -r requirements.txt
 export MODELSCOPE_API_KEY="sk-xxx"  # 或用本地 vLLM
-python main.py solo -p "Hello"
+
+# Workflow 模式 - 专家流水线（推荐）
+python main.py workflow -n resume -i @data/sample_resume.json
+
+# Solo 模式 - LLM 自己决定
+python main.py solo -p "优化简历" --resume @data/sample_resume.json
 ```
 
 ---
 
 ## Modes
 
-### Solo 模式（推荐）
+### Workflow 模式（推荐）
 
-**ReactAgent + Agent-as-Tool 架构**：ReactAgent 作为协调者，调用封装为工具的专业 Agent。
+**固定专家流水线**：每个专家调用 LLM 进行深度处理，顺序由代码固定。
 
 ```bash
-# 基础对话
-python main.py solo -p "帮我算 127 * 38"
+# 基础使用
+python main.py workflow -n resume -i @data/sample_resume.json
 
-# 简历生成（完整流程：内容优化 - 布局设计 - 生成文档）
-python main.py solo -p "请优化简历并生成Word文档" --resume @data/resumes/my_resume.json
+# 指定职位描述（自动匹配模板 + 内容优化）
+python main.py workflow -n resume -i @data/sample_resume.json --jd data/sample_job.txt
+
+# 指定模板和页面偏好
+python main.py workflow -n resume -i @data/sample_resume.json --template tech_modern --page one_page
 ```
 
 **执行流程**：
 
 ```
-ReactAgent (协调者)
-    |
-    +-- 第1轮: content_optimizer
-    |         ContentAgent (Think-Execute-Reflect)
-    |         保存优化结果 -> @optimized
-    |
-    +-- 第2轮: layout_designer with "@optimized"
-    |         LayoutAgent (Think-Execute-Reflect)  
-    |         保存布局配置 -> @layout
-    |
-    +-- 第3轮: generate_resume with "@layout"
-              纯渲染器，使用 LayoutAgent 的配置生成 .docx
+ResumePipeline (专家流水线)
+    │
+    ├── Step 1: ContentAgent (内容优化专家)
+    │            📞 LLM: Think → Execute
+    │            提取JD关键词、分析弱点、优化内容
+    │
+    ├── Step 2: StyleSelector (模板选择)
+    │            根据 JD 自动匹配或手动指定
+    │
+    ├── Step 3: LayoutAgent (布局设计专家)
+    │            📞 LLM: Think → Execute
+    │            设计布局配置
+    │
+    ├── Step 4: LayoutOptimizer (分页优化)
+    │            智能调整间距/字体，确保一页
+    │
+    └── Step 5: ResumeGenerator (生成文档)
+                 生成 Word 文档
 ```
 
-**数据引用机制**：避免 LLM 传递长 JSON 出错
+### Solo 模式
 
-| 引用 | 说明 |
-|------|------|
-| `@optimized` | content_optimizer 保存的优化数据 |
-| `@layout` | layout_designer 保存的布局数据 |
-
-### Workflow 模式
-
-硬编码的顺序工作流，适合固定流程：
+**ReactAgent + Agent-as-Tool**：LLM 自己决定调用工具的顺序。
 
 ```bash
-python main.py workflow --task resume --data @data/resumes/my_resume.json
+python main.py solo -p "优化并生成简历" --resume @data/sample_resume.json --template tech_modern
+```
+
+**执行流程**：
+
+```
+ReactAgent (LLM 决策)
+    │
+    ├── LLM决定 → content_optimizer
+    │              └─ ContentAgent (📞 LLM)
+    │              └─ 保存 → @optimized
+    │
+    ├── LLM决定 → layout_designer with "@optimized"
+    │              └─ 分页优化
+    │              └─ 保存 → @layout
+    │
+    └── LLM决定 → generate_resume with "@layout"
+                   └─ 生成 .docx
+```
+
+### 两种模式对比
+
+| 特性 | Solo 模式 | Workflow 模式 |
+|------|----------|---------------|
+| 执行顺序 | LLM 自己决定 | 代码固定 |
+| LLM 调用 | 每轮决策 + 工具内部 | 只有专家调用 |
+| 稳定性 | 可能漏调/乱序 | 100% 按流程 |
+| 适用场景 | 灵活对话 | 生产环境 |
+
+---
+
+## Features
+
+### 🎨 模板系统
+
+支持 6 种预设模板，可根据职位描述自动匹配：
+
+| 模板 | 适用场景 |
+|------|----------|
+| `tech_modern` | 互联网/科技公司技术岗 |
+| `tech_classic` | 外企/传统企业技术岗 |
+| `management` | 产品经理/项目经理 |
+| `creative` | UI设计师/创意岗 |
+| `minimal` | 通用极简风格 |
+| `fresh_graduate` | 应届生/实习生 |
+
+```bash
+# 列出所有模板
+python -c "from tools.templates import get_registry; print(get_registry().available_templates)"
+
+# 根据 JD 自动匹配
+python main.py workflow -n resume -i @data/sample_resume.json --jd job.txt
+```
+
+### 📄 智能分页
+
+自动调整布局确保简历适合目标页数：
+
+```bash
+# 强制一页
+python main.py workflow -n resume -i @data/sample_resume.json --page one_page
+
+# 自动判断（默认）
+python main.py workflow -n resume -i @data/sample_resume.json --page auto
+```
+
+优化策略：
+1. 调整章节间距
+2. 调整字体大小
+3. 精简内容（保留核心）
+
+### 🎯 职位匹配
+
+提供 JD 后自动：
+- 提取关键词
+- 匹配最佳模板
+- 优化内容侧重点
+
+```bash
+python main.py workflow -n resume -i @data/sample_resume.json --jd data/sample_job.txt
 ```
 
 ---
@@ -91,45 +178,50 @@ python main.py workflow --task resume --data @data/resumes/my_resume.json
 ## Architecture
 
 ```
-+------------------------------------------------------------------+
-|                          USER REQUEST                             |
-+----------------------------------+-------------------------------+
-                                   |
-                                   v
-+------------------------------------------------------------------+
-|                         ReactAgent                                |
-|                     (ReAct: Reason + Act)                         |
-|                                                                   |
-|    User Query --> Think --> Select Tool --> Execute --> Reflect   |
-|                                                                   |
-+----------------------------------+-------------------------------+
-                                   |
-          +------------------------+------------------------+
-          |                        |                        |
-          v                        v                        v
-+------------------+    +------------------+    +------------------+
-|   Agent Tools    |    |  Generator Tools |    |   Basic Tools    |
-|                  |    |                  |    |                  |
-|  +-----------+   |    |  +------------+  |    |  +------------+  |
-|  | Content   |   |    |  | Resume     |  |    |  | Calculator |  |
-|  | Optimizer |   |    |  | Generator  |  |    |  +------------+  |
-|  +-----------+   |    |  +------------+  |    |  | Search     |  |
-|  | Layout    |   |    |                  |    |  +------------+  |
-|  | Designer  |   |    |                  |    |  | FileOps    |  |
-|  +-----------+   |    |                  |    |  +------------+  |
-+--------+---------+    +--------+---------+    +------------------+
-         |                       |
-         v                       v
-+------------------+    +------------------+
-|  ContentAgent    |    |  ResumeGenerator |
-|  (BaseLLMAgent)  |    |  (python-docx)   |
-|                  |    |                  |
-|  Think-Execute   |    |  Pure Renderer   |
-|  -Reflect        |    |  (no LLM calls)  |
-+------------------+    +------------------+
-|  LayoutAgent     |
-|  (BaseLLMAgent)  |
-+------------------+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              USER REQUEST                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+            ┌───────────────────────┴───────────────────────┐
+            │                                               │
+            ▼                                               ▼
+┌───────────────────────┐                     ┌───────────────────────┐
+│     Solo Mode         │                     │    Workflow Mode      │
+│                       │                     │                       │
+│  ReactAgent (LLM)     │                     │  ResumePipeline       │
+│      │                │                     │      │                │
+│      ▼                │                     │      ▼                │
+│  Tool Selection       │                     │  Fixed Steps          │
+│  (LLM decides)        │                     │  (Code defines)       │
+└───────────┬───────────┘                     └───────────┬───────────┘
+            │                                             │
+            └─────────────────────┬───────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Expert Agents                                   │
+│                                                                              │
+│   ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐         │
+│   │  ContentAgent   │    │  LayoutAgent    │    │ StyleSelector   │         │
+│   │                 │    │                 │    │                 │         │
+│   │  📞 LLM Call    │    │  📞 LLM Call    │    │  Rule-based     │         │
+│   │  Think→Execute  │    │  Think→Execute  │    │  Matching       │         │
+│   └─────────────────┘    └─────────────────┘    └─────────────────┘         │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Output Layer                                    │
+│                                                                              │
+│   ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐         │
+│   │ LayoutOptimizer │    │ TemplateRegistry│    │ ResumeGenerator │         │
+│   │                 │    │                 │    │                 │         │
+│   │  Pagination     │    │  6 Presets      │    │  python-docx    │         │
+│   │  Algorithm      │    │  JSON + Python  │    │  .docx Output   │         │
+│   └─────────────────┘    └─────────────────┘    └─────────────────┘         │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 <details>
@@ -137,76 +229,80 @@ python main.py workflow --task resume --data @data/resumes/my_resume.json
 
 ```
 agent/
-├── core/                   # 核心抽象
-│   ├── task.py            #   Task, TaskResult
-│   ├── orchestrator.py    #   任务路由
-│   ├── parser.py          #   工具调用解析
-│   └── knowledge.py       #   RAG 接口
+├── workflows/                 # 🆕 工作流模块
+│   ├── base.py               #   工作流基类
+│   └── resume_pipeline.py    #   简历生成流水线
 │
-├── agents/                 # Agent 层
-│   ├── base.py            #   BaseLLMAgent (Think-Execute-Reflect)
-│   ├── react_agent.py     #   ReactAgent (Solo 模式协调者)
-│   └── crews/             #   专业 Agent 实现
-│       └── resume/        #       简历相关
-│           ├── content_agent.py  # 内容优化 Agent
-│           └── layout_agent.py   # 布局设计 Agent
+├── agents/                    # Agent 层
+│   ├── base.py               #   BaseLLMAgent (Think-Execute)
+│   ├── react_agent.py        #   ReactAgent (Solo 模式)
+│   └── crews/resume/         #   专家 Agent
+│       ├── content_agent.py  #     内容优化专家
+│       └── layout_agent.py   #     布局设计专家
 │
-├── tools/                  # 工具集
-│   ├── base.py            #   BaseTool 抽象
-│   ├── registry.py        #   工具注册器
-│   ├── agents/            #   Agent 工具包装器
-│   │   ├── content_optimizer.py  # ContentAgent -> Tool
-│   │   └── layout_designer.py    # LayoutAgent -> Tool
-│   └── generators/        #   生成器工具
-│       └── resume.py      #       Word 文档生成
+├── tools/                     # 工具集
+│   ├── agent_wrappers/       #   Agent 工具包装器
+│   │   ├── content_optimizer.py
+│   │   ├── layout_designer.py
+│   │   └── style_selector.py
+│   ├── generators/           #   生成器
+│   │   ├── resume.py         #     Word 文档生成
+│   │   └── pagination.py     #   🆕 智能分页
+│   └── templates/            # 🆕 模板系统
+│       ├── base.py           #     模板基类
+│       ├── registry.py       #     模板注册表
+│       ├── presets/          #     预设模板 (JSON)
+│       │   ├── tech_modern.json
+│       │   ├── tech_classic.json
+│       │   ├── management.json
+│       │   ├── creative.json
+│       │   ├── minimal.json
+│       │   └── fresh_graduate.json
+│       └── custom/           #     自定义模板 (Python)
 │
-├── llm/                    # LLM 后端
-│   ├── base.py            #   BaseLLM
-│   ├── modelscope.py      #   ModelScope API
-│   └── vllm_client.py     #   本地 vLLM
+├── llm/                       # LLM 后端
+│   ├── modelscope.py         #   ModelScope API
+│   └── vllm.py               #   本地 vLLM
 │
-├── knowledge/              # RAG 实现
-│   └── vector_kb.py       #   Milvus 向量检索
+├── data/                      # 示例数据
+│   ├── sample_resume.json    #   示例简历
+│   └── sample_job.txt        #   示例职位描述
 │
-├── configs/                # 配置文件
-│   └── config.yaml        #   LLM/Agent 配置
+├── output/                    # 输出目录
 │
-├── data/                   # 数据目录
-│   └── resumes/           #   简历 JSON 模板
-│
-├── output/                 # 输出目录
-│   └── *.docx             #   生成的简历
-│
-└── main.py                 # CLI 入口
+└── main.py                    # CLI 入口
 ```
 
 </details>
 
 <details>
-<summary><b>Agent-as-Tool 模式</b></summary>
+<summary><b>数据流详解</b></summary>
 
-将完整的 Agent（含 Think-Execute-Reflect 循环）封装为工具，供 ReactAgent 调用：
+工具之间通过临时文件传递数据，使用 `@` 标签引用：
 
-```python
-# tools/agents/content_optimizer.py
-class ContentOptimizerTool(BaseTool):
-    name = "content_optimizer"
-    description = "优化简历内容"
-    
-    def execute(self, resume_json: str) -> str:
-        # 初始化专业 Agent
-        agent = ContentAgent(self.llm)
-        # 执行完整的 Think-Execute-Reflect 流程
-        result = agent.run(resume_data)
-        # 保存结果供后续工具使用
-        save_to_temp("optimized_resume.json", result.data)
-        return "优化完成，使用 @optimized 引用结果"
+```
+/tmp/
+├── original_resume.json      # main.py 保存原始简历
+│       ↓
+│   ContentOptimizerTool 读取 (@original)
+│       ↓
+├── optimized_resume.json     # ContentAgent 优化后保存
+│       ↓
+│   LayoutDesignerTool 读取 (@optimized)
+│       ↓
+├── layout_resume.json        # 布局设计后保存（含 _layout_config）
+│       ↓
+│   ResumeGenerator 读取 (@layout)
+│       ↓
+output/*.docx                  # 最终输出
 ```
 
-**优势**：
-- ReactAgent 专注于任务拆解和工具选择
-- 专业 Agent 专注于特定领域的深度处理
-- 数据引用机制避免 LLM 传递长 JSON
+| 引用 | 说明 |
+|------|------|
+| `@original` | 原始简历数据 |
+| `@optimized` | 内容优化后的数据 |
+| `@layout` | 布局设计后的数据 |
+| `@selected` | 已选择的模板配置 |
 
 </details>
 
@@ -214,48 +310,37 @@ class ContentOptimizerTool(BaseTool):
 
 ## Extend
 
-**添加 Agent 工具**
+**添加新的工作流**
 
 ```python
-# 1. 实现专业 Agent
-class MyAgent(BaseLLMAgent):
-    AGENT_NAME = "my_agent"
-    
-    def _get_role_prompt(self):
-        return "你是一个专业的..."
-    
-    def _execute_task(self, context):
-        # Think - Execute - Reflect
-        return AgentResult(success=True, data=result)
+# workflows/my_pipeline.py
+from workflows.base import BaseWorkflow, WorkflowResult, WorkflowContext
 
-# 2. 封装为工具
-class MyTool(BaseTool):
-    name = "my_tool"
-    description = "执行特定任务"
-    parameters = {...}
+class MyPipeline(BaseWorkflow):
+    WORKFLOW_NAME = "my_pipeline"
+    WORKFLOW_STEPS = ["步骤1", "步骤2", "步骤3"]
     
-    def execute(self, **kwargs) -> str:
-        agent = MyAgent(self.llm)
-        result = agent.run(kwargs)
-        return result.to_json()
+    def _execute_steps(self, ctx: WorkflowContext) -> WorkflowResult:
+        # Step 1
+        self._step("步骤1")
+        # ...
+        
+        return WorkflowResult(success=True, output={...})
 ```
 
-**添加基础工具**
+**添加新的模板**
 
-```python
-class CalculatorTool(BaseTool):
-    name = "calculator"
-    description = "执行数学计算"
-    parameters = {
-        "type": "object",
-        "properties": {
-            "expression": {"type": "string", "description": "数学表达式"}
-        },
-        "required": ["expression"]
-    }
-    
-    def execute(self, expression: str) -> str:
-        return str(eval(expression))
+```json
+// tools/templates/presets/my_template.json
+{
+  "name": "my_template",
+  "display_name": "我的模板",
+  "tags": ["标签1", "标签2"],
+  "job_keywords": ["关键词1", "关键词2"],
+  "page_preference": "one_page",
+  "font_config": {"body_size": 10, "heading_size": 14},
+  "spacing_config": {"margin": 0.5, "section_gap": 6}
+}
 ```
 
 ---
@@ -264,15 +349,14 @@ class CalculatorTool(BaseTool):
 
 | Status | Feature | Description |
 |:------:|---------|-------------|
-| Done | Solo Mode | ReactAgent + Agent-as-Tool 架构 |
-| Done | Workflow Mode | 硬编码顺序工作流 |
-| Done | Resume Generation | 内容优化 - 布局设计 - Word 生成 |
-| Done | RAG | Milvus 向量检索 |
-| Done | Tools | 工具注册器 + 数据引用机制 |
-| WIP | True Multi-Agent | 动态编排器，自主规划创建 Agent |
-| WIP | Multimodal | 图片/PDF/表格检索、YOLO、SAM |
-| WIP | Memory | 短期上下文 + 长期向量记忆 |
-| WIP | Web UI | 交互面板、执行可视化 |
+| ✅ | Solo Mode | ReactAgent + Agent-as-Tool |
+| ✅ | Workflow Mode | 专家流水线架构 |
+| ✅ | Template System | 6种预设模板 + 自动匹配 |
+| ✅ | Smart Pagination | 智能分页优化 |
+| ✅ | Job Matching | 职位描述匹配 |
+| 🚧 | Multi-Agent | 动态编排器 |
+| 🚧 | Web UI | 交互面板 |
+| 🚧 | Memory | 长期记忆 |
 
 ---
 

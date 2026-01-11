@@ -1,0 +1,38 @@
+{
+  "name": "tech_classic",
+  "display_name": "技术岗-经典风格",
+  "description": "适合传统企业或外企的技术岗位，正式稳重",
+  "tags": ["技术", "外企", "传统企业"],
+  "job_keywords": ["工程师", "开发", "系统", "运维", "DBA", "测试", "QA"],
+  "page_preference": "one_page",
+  "section_order": ["header", "summary", "experience", "education", "skills", "projects"],
+  "section_weights": {
+    "experience": 1.2,
+    "education": 1.0,
+    "skills": 0.9,
+    "projects": 0.8
+  },
+  "style": "classic",
+  "color_scheme": "monochrome",
+  "font_config": {
+    "title_size": 14,
+    "heading_size": 11,
+    "subheading_size": 10,
+    "body_size": 10,
+    "small_size": 9
+  },
+  "spacing_config": {
+    "margin": 0.5,
+    "section_gap": 6,
+    "item_gap": 2,
+    "line_height": 1.15
+  },
+  "use_icons": false,
+  "use_skill_bars": false,
+  "use_timeline": false,
+  "highlight_keywords": false,
+  "max_experiences": 4,
+  "max_projects": 2,
+  "max_highlights_per_item": 4,
+  "max_skills": 12
+}

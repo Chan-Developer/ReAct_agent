@@ -1,0 +1,39 @@
+{
+  "name": "minimal",
+  "display_name": "极简风格",
+  "description": "极简主义风格，适合追求简洁的求职者",
+  "tags": ["简约", "极简", "通用"],
+  "job_keywords": [],
+  "page_preference": "one_page",
+  "section_order": ["header", "summary", "experience", "projects", "education", "skills"],
+  "section_weights": {
+    "experience": 1.0,
+    "projects": 1.0,
+    "education": 1.0,
+    "skills": 1.0
+  },
+  "style": "minimal",
+  "color_scheme": "elegant",
+  "font_config": {
+    "title_size": 14,
+    "heading_size": 10,
+    "subheading_size": 9,
+    "body_size": 9,
+    "small_size": 8,
+    "family": "Microsoft YaHei"
+  },
+  "spacing_config": {
+    "margin": 0.4,
+    "section_gap": 4,
+    "item_gap": 1,
+    "line_height": 1.0
+  },
+  "use_icons": false,
+  "use_skill_bars": false,
+  "use_timeline": false,
+  "highlight_keywords": false,
+  "max_experiences": 3,
+  "max_projects": 2,
+  "max_highlights_per_item": 3,
+  "max_skills": 10
+}
