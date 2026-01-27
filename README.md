@@ -527,27 +527,402 @@ python main.py solo -p "你好" --local
 | **Web Search** | 联网搜索（DuckDuckGo / Tavily） |
 | **Memory** | 短期记忆(Redis) + 长期记忆(Milvus) |
 
-### 下一步：Skills 🎯
+---
 
-计划添加更多实用技能工具：
+### 下一步：Agent 架构升级 🏗️
+
+计划实现更多 Agent 架构模式：
+
+```mermaid
+flowchart LR
+    subgraph CurrentArch [当前架构]
+        ReAct[ReAct<br/>Think→Act→Observe]
+    end
+    
+    subgraph PlannedArch [计划架构]
+        PlanExec[Plan-and-Execute<br/>规划→分解→执行]
+        LATS[LATS<br/>树搜索+反思]
+        Reflexion[Reflexion<br/>自我反思改进]
+    end
+    
+    ReAct --> PlanExec
+    ReAct --> LATS
+    ReAct --> Reflexion
+```
+
+| 架构 | 描述 | 适用场景 | Priority |
+|------|------|----------|:--------:|
+| **Plan-and-Execute** | 先规划任务分解，再逐步执行 | 复杂多步骤任务 | ⭐⭐⭐ |
+| **LATS** | Language Agent Tree Search，树搜索+反思 | 需要探索多种方案 | ⭐⭐⭐ |
+| **Reflexion** | 执行后自我反思，迭代改进 | 需要高质量输出 | ⭐⭐ |
+| **AutoGPT-style** | 自主目标分解和执行 | 开放式任务 | ⭐⭐ |
+
+**Plan-and-Execute 架构示意：**
+
+```
+用户目标: "帮我写一个博客网站"
+        ↓
+    [Planner Agent]
+        ↓
+    任务分解:
+    ├── 1. 设计数据库模型
+    ├── 2. 实现后端 API
+    ├── 3. 创建前端页面
+    └── 4. 部署配置
+        ↓
+    [Executor Agent] × N
+        ↓
+    逐个执行 + 状态更新
+        ↓
+    完成
+```
+
+---
+
+### 下一步：Skills 工具扩展 🔧
 
 | Skill | Description | Priority |
 |-------|-------------|:--------:|
-| Code Executor | 代码执行沙箱 | ⭐⭐⭐ |
-| File Manager | 文件读写、目录操作 | ⭐⭐⭐ |
+| **Code Executor** | 代码执行沙箱（Docker/Pyodide） | ⭐⭐⭐ |
+| **Image Analysis** | 图像理解（多模态 VLM） | ⭐⭐⭐ |
+| File Manager | 文件读写、目录操作 | ⭐⭐ |
 | Web Browser | 网页浏览和提取 | ⭐⭐ |
-| Image Analysis | 图像理解（多模态） | ⭐⭐ |
 | Database | SQL/向量数据库操作 | ⭐⭐ |
-| API Caller | 通用 API 调用 | ⭐ |
+
+#### Code Executor 设计
+
+安全的代码执行沙箱，支持：
+
+```python
+class CodeExecutor(BaseTool):
+    """代码执行沙箱"""
+    
+    def execute(self, code: str, language: str = "python") -> str:
+        # 方案1: Docker 隔离执行
+        # 方案2: Pyodide (浏览器端 Python)
+        # 方案3: RestrictedPython (受限执行)
+        pass
+```
+
+```mermaid
+flowchart LR
+    Code[代码] --> Sandbox[沙箱环境]
+    Sandbox --> Docker[Docker 容器]
+    Sandbox --> Pyodide[Pyodide WASM]
+    Docker --> Result[执行结果]
+    Pyodide --> Result
+```
+
+#### Image Analysis 设计
+
+多模态图像理解能力：
+
+```python
+class ImageAnalyzer(BaseTool):
+    """图像分析工具（多模态）"""
+    
+    def execute(self, image_path: str, question: str) -> str:
+        # 支持的 VLM 后端:
+        # - Qwen-VL / Qwen2-VL
+        # - LLaVA
+        # - GPT-4V / Claude Vision
+        pass
+```
+
+支持场景：
+- 图像描述和问答
+- OCR 文字提取
+- 图表/流程图理解
+- UI 截图分析
+
+---
+
+### 下一步：Agent 能力评估 📊
+
+基于基准测试的能力评分体系：
+
+```mermaid
+flowchart TB
+    subgraph Benchmarks [评测基准]
+        GSM8K[GSM8K<br/>数学推理]
+        HumanEval[HumanEval<br/>代码生成]
+        MMLU[MMLU<br/>知识问答]
+        ToolBench[ToolBench<br/>工具使用]
+        AgentBench[AgentBench<br/>Agent 综合]
+    end
+    
+    subgraph Metrics [评估维度]
+        Accuracy[准确性]
+        Efficiency[效率]
+        ToolUse[工具使用]
+        Planning[规划能力]
+        Reflection[反思能力]
+    end
+    
+    subgraph Output [输出]
+        Score[能力评分]
+        Report[评测报告]
+        Radar[雷达图]
+    end
+    
+    Benchmarks --> Metrics
+    Metrics --> Output
+```
+
+**评估维度：**
+
+| 维度 | 评测方法 | 基准数据集 |
+|------|----------|------------|
+| 推理能力 | 数学/逻辑题正确率 | GSM8K, MATH |
+| 代码能力 | 代码生成通过率 | HumanEval, MBPP |
+| 工具使用 | 工具调用准确率 | ToolBench |
+| 规划能力 | 任务分解合理性 | AgentBench |
+| 反思能力 | 错误修正率 | Self-Refine |
+
+**输出示例：**
+
+```
+┌─────────────────────────────────┐
+│     Agent 能力评估报告          │
+├─────────────────────────────────┤
+│ 推理能力    ████████░░  80%    │
+│ 代码能力    ███████░░░  70%    │
+│ 工具使用    █████████░  90%    │
+│ 规划能力    ██████░░░░  60%    │
+│ 反思能力    ███████░░░  70%    │
+├─────────────────────────────────┤
+│ 综合评分: 74/100               │
+└─────────────────────────────────┘
+```
+
+---
+
+### 下一步：上下文管理 📏
+
+处理 LLM 上下文窗口限制的核心问题：
+
+```mermaid
+flowchart LR
+    Input[输入内容] --> TokenCount[Token 计数]
+    TokenCount --> Check{超过限制?}
+    Check -->|否| LLM[直接发送 LLM]
+    Check -->|是| Strategy[压缩策略]
+    Strategy --> Truncate[截断]
+    Strategy --> Summarize[摘要压缩]
+    Strategy --> Retrieve[检索关键部分]
+    Truncate --> LLM
+    Summarize --> LLM
+    Retrieve --> LLM
+```
+
+#### 上下文截断检测
+
+```python
+class ContextManager:
+    """上下文管理器"""
+    
+    def __init__(self, max_tokens: int = 4096, model: str = "gpt-3.5"):
+        self.max_tokens = max_tokens
+        self.tokenizer = get_tokenizer(model)
+    
+    def check_overflow(self, messages: List[dict]) -> dict:
+        """检测上下文是否会被截断"""
+        total_tokens = self.count_tokens(messages)
+        return {
+            "total_tokens": total_tokens,
+            "max_tokens": self.max_tokens,
+            "overflow": total_tokens > self.max_tokens,
+            "overflow_tokens": max(0, total_tokens - self.max_tokens)
+        }
+    
+    def estimate_response_budget(self, messages: List[dict], 
+                                  reserve_ratio: float = 0.3) -> int:
+        """估算剩余可用于响应的 token 数"""
+        used = self.count_tokens(messages)
+        reserved = int(self.max_tokens * reserve_ratio)
+        return max(0, self.max_tokens - used - reserved)
+```
+
+#### 上下文压缩策略
+
+| 策略 | 方法 | 适用场景 | 压缩比 |
+|------|------|----------|--------|
+| **截断** | 丢弃最旧消息 | 对话历史过长 | 高 |
+| **摘要压缩** | LLM 总结历史 | 保留关键信息 | 中 |
+| **选择性保留** | 只保留相关上下文 | Memory 检索 | 低 |
+| **滑动窗口** | 保持固定窗口大小 | 流式对话 | 中 |
+
+```python
+class ContextCompressor:
+    """上下文压缩器"""
+    
+    def compress(self, messages: List[dict], 
+                 target_tokens: int,
+                 strategy: str = "auto") -> List[dict]:
+        """
+        压缩消息到目标 token 数
+        
+        策略:
+        - truncate: 截断旧消息
+        - summarize: 摘要压缩
+        - selective: 保留相关部分
+        - auto: 自动选择最佳策略
+        """
+        pass
+    
+    def summarize_history(self, messages: List[dict]) -> str:
+        """将历史消息压缩为摘要"""
+        # 使用 LLM 生成简洁摘要
+        pass
+```
+
+**压缩流程示意：**
+
+```
+原始对话 (8000 tokens)
+├── System Prompt (500)
+├── 历史消息 1-10 (3000)  ← 压缩为摘要 (300)
+├── 历史消息 11-20 (2500) ← 保留关键 (800)
+├── 当前消息 (1500)       ← 完整保留
+└── 工具结果 (500)        ← 完整保留
+        ↓
+压缩后 (3600 tokens) ✓ 可以发送
+```
+
+---
+
+### 下一步：安全防护 🔒
+
+Agent 执行安全和输入/输出过滤：
+
+```mermaid
+flowchart TB
+    subgraph Input [输入安全]
+        PromptInjection[Prompt 注入检测]
+        InputFilter[敏感信息过滤]
+        RateLimit[速率限制]
+    end
+    
+    subgraph Execution [执行安全]
+        Sandbox[沙箱隔离]
+        Permission[权限控制]
+        Timeout[超时保护]
+    end
+    
+    subgraph Output [输出安全]
+        PIIFilter[PII 脱敏]
+        ContentFilter[内容过滤]
+        Audit[审计日志]
+    end
+    
+    Input --> Execution --> Output
+```
+
+#### 安全模块设计
+
+| 模块 | 功能 | Priority |
+|------|------|:--------:|
+| **Prompt 注入检测** | 识别恶意 prompt 注入攻击 | ⭐⭐⭐ |
+| **执行沙箱** | 代码/命令隔离执行 | ⭐⭐⭐ |
+| **权限系统** | 工具调用权限控制 | ⭐⭐ |
+| **敏感信息过滤** | 输入/输出 PII 脱敏 | ⭐⭐ |
+| **审计日志** | 完整操作记录 | ⭐⭐ |
+
+```python
+class SafetyGuard:
+    """安全防护模块"""
+    
+    def check_prompt_injection(self, text: str) -> dict:
+        """
+        检测 prompt 注入攻击
+        
+        检测模式:
+        - 指令覆盖: "忽略之前的指令..."
+        - 角色扮演: "你现在是一个..."
+        - 越狱尝试: "DAN模式..."
+        """
+        patterns = [
+            r"ignore\s+(previous|above|all)\s+instructions",
+            r"忽略(之前|以上|所有)的?(指令|规则)",
+            r"you\s+are\s+now\s+a",
+            r"你现在是",
+            # ... more patterns
+        ]
+        # 返回风险评分和检测结果
+        pass
+    
+    def filter_pii(self, text: str, mode: str = "mask") -> str:
+        """
+        过滤敏感个人信息
+        
+        mode: mask(掩码) / remove(移除) / hash(哈希)
+        类型: 手机号、邮箱、身份证、银行卡...
+        """
+        pass
+    
+    def validate_tool_call(self, tool_name: str, 
+                           args: dict,
+                           user_permissions: List[str]) -> bool:
+        """验证工具调用权限"""
+        pass
+
+class ExecutionSandbox:
+    """执行沙箱"""
+    
+    def __init__(self, 
+                 timeout: int = 30,
+                 max_memory: str = "512M",
+                 network: bool = False):
+        self.timeout = timeout
+        self.max_memory = max_memory
+        self.network = network
+    
+    def run(self, code: str, language: str = "python") -> dict:
+        """
+        在沙箱中执行代码
+        
+        返回: {
+            "success": bool,
+            "output": str,
+            "error": str,
+            "execution_time": float,
+            "memory_used": int
+        }
+        """
+        # Docker / gVisor / Pyodide 隔离执行
+        pass
+```
+
+**权限模型：**
+
+```
+┌─────────────────────────────────────────┐
+│            Permission Levels            │
+├─────────────────────────────────────────┤
+│ Level 0: Read-Only                      │
+│   └── 搜索、查询、分析                   │
+│                                         │
+│ Level 1: Basic Write                    │
+│   └── 文件创建、简单修改                 │
+│                                         │
+│ Level 2: System Access                  │
+│   └── 命令执行、网络访问                 │
+│                                         │
+│ Level 3: Admin (需人工确认)             │
+│   └── 删除、敏感操作                     │
+└─────────────────────────────────────────┘
+```
+
+---
 
 ### 规划中 🚧
 
-| Feature | Description |
-|---------|-------------|
-| Multi-Agent | 动态编排，Agent 自主协作 |
-| RAG | 文档检索增强生成 |
-| Web UI | 交互面板、执行可视化 |
-| Evaluation | Agent 评测框架 |
+| Feature | Description | Priority |
+|---------|-------------|:--------:|
+| Multi-Agent | 动态编排，Agent 自主协作 | ⭐⭐⭐ |
+| RAG | 文档检索增强生成 | ⭐⭐ |
+| Web UI | 交互面板、执行可视化 | ⭐⭐ |
+| Agent Training | 基于反馈的 Agent 微调 | ⭐ |
 
 ---
 
