@@ -6,11 +6,16 @@
 from .calculator import Calculator
 from .search import Search
 from .file_ops import AddFile, ReadFile
+from .web_search import TavilySearch, DuckDuckGoSearch, WebSearch
 
 __all__ = [
     "Calculator",
     "Search",
     "AddFile",
     "ReadFile",
+    # 联网搜索
+    "TavilySearch",
+    "DuckDuckGoSearch",
+    "WebSearch",
 ]
 

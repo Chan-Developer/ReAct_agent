@@ -141,6 +141,54 @@ class MyWorkflow(BaseWorkflow):
         return WorkflowResult(success=True, output={...})
 ```
 
+### 5. Memory（记忆系统）
+
+Agent 的长短期记忆管理：
+
+```python
+from memory import MemoryManager, MemoryType
+from agents import ReactAgent
+
+# 创建记忆管理器
+memory = MemoryManager(
+    redis_host="localhost",      # 短期记忆
+    milvus_host="localhost",     # 长期记忆
+    embedding=your_embedding,    # 向量模型（长期记忆需要）
+    long_term_threshold=0.6,     # 重要性阈值
+)
+
+# 集成到 Agent
+agent = ReactAgent(
+    llm=llm,
+    tools=[...],
+    memory=memory,  # 启用记忆
+)
+
+# Agent 会自动：
+# 1. 记录对话到短期记忆
+# 2. 重要内容存入长期记忆
+# 3. 搜索相关记忆注入 prompt
+```
+
+**记忆类型：**
+
+| 类型 | 说明 | 存储位置 |
+|------|------|----------|
+| `CONVERSATION` | 对话记录 | 短期 |
+| `TASK` | 任务执行记录 | 短期/长期 |
+| `KNOWLEDGE` | 学到的知识 | 长期 |
+| `EXPERIENCE` | 经验总结 | 长期 |
+| `USER_PREFERENCE` | 用户偏好 | 长期 |
+
+**Memory 在 Agent 中的使用位置：**
+
+| 位置 | 功能 | 触发时机 |
+|------|------|----------|
+| `run()` 开始 | 记录用户输入 | 每次对话 |
+| `_render_system_prompt()` | 检索记忆注入 Prompt | 每次对话 |
+| 每轮对话后 | 记录助手回复 | 每轮 |
+| 任务完成时 | 记录成功/失败 | 任务结束 |
+
 ---
 
 ## Examples
@@ -189,41 +237,122 @@ output/*.docx
 
 ## Architecture
 
+### 系统整体架构
+
 ```mermaid
 flowchart TB
-    subgraph Input["🎯 用户请求"]
+    subgraph UserLayer [用户层]
         User[用户输入]
     end
 
-    subgraph Modes["运行模式"]
-        Solo["Solo 模式<br/>ReactAgent<br/>(LLM 决策)"]
-        Workflow["Workflow 模式<br/>Pipeline<br/>(代码固定)"]
+    subgraph AgentLayer [Agent 层]
+        ReactAgent[ReactAgent]
+        Conversation[Conversation<br/>当前对话管理]
     end
 
-    subgraph Tools["🔧 工具层"]
+    subgraph MemoryLayer [记忆层]
+        MemoryManager[MemoryManager<br/>统一记忆管理]
+        ShortTerm[ShortTermMemory<br/>短期记忆]
+        LongTerm[LongTermMemory<br/>长期记忆]
+    end
+
+    subgraph StorageLayer [存储层]
+        Redis[(Redis<br/>TTL 过期)]
+        Milvus[(Milvus<br/>向量检索)]
+    end
+
+    subgraph ToolLayer [工具层]
+        ToolRegistry[ToolRegistry]
         Calculator[Calculator]
-        Search[Search]
+        WebSearch[WebSearch]
         FileOps[FileOps]
-        AgentTools[Agent Tools]
+        OtherTools[...]
     end
 
-    subgraph Agents["🧠 专家 Agent 层"]
-        Content["ContentAgent<br/>Think → Execute"]
-        Layout["LayoutAgent<br/>Think → Execute"]
-        Custom["YourAgent<br/>Think → Execute"]
+    subgraph LLMLayer [LLM 层]
+        LLM[LLM Backend<br/>ModelScope / vLLM]
     end
 
-    subgraph LLM["⚡ LLM 层"]
-        API["ModelScope / vLLM / OpenAI"]
+    subgraph EmbeddingLayer [嵌入层]
+        Embedding[EmbeddingModel]
     end
 
-    User --> Solo
-    User --> Workflow
-    Solo --> Tools
-    Workflow --> Tools
-    AgentTools --> Agents
-    Agents --> LLM
-    Tools --> LLM
+    User -->|1. 输入| ReactAgent
+    ReactAgent -->|2. 记录输入| MemoryManager
+    ReactAgent -->|3. 检索记忆| MemoryManager
+    MemoryManager -->|4. 注入上下文| ReactAgent
+    ReactAgent -->|5. 思考| LLM
+    LLM -->|6. 返回响应| ReactAgent
+    ReactAgent -->|7. 调用工具| ToolRegistry
+    ToolRegistry --> Calculator
+    ToolRegistry --> WebSearch
+    ToolRegistry --> FileOps
+    ToolRegistry --> OtherTools
+    ReactAgent -->|8. 记录结果| MemoryManager
+    ReactAgent -->|9. 返回答案| User
+
+    MemoryManager --> ShortTerm
+    MemoryManager --> LongTerm
+    ShortTerm --> Redis
+    LongTerm --> Milvus
+    LongTerm -.->|向量化| Embedding
+```
+
+### Memory 使用流程
+
+```mermaid
+sequenceDiagram
+    participant U as 用户
+    participant A as ReactAgent
+    participant M as MemoryManager
+    participant ST as ShortTermMemory
+    participant LT as LongTermMemory
+    participant L as LLM
+
+    U->>A: run("帮我写排序算法")
+    
+    Note over A,M: 位置1: 记录用户输入
+    A->>M: add_conversation("user", input)
+    M->>ST: add(MemoryItem)
+    
+    Note over A,M: 位置2: 检索相关记忆注入Prompt
+    A->>M: get_context(query)
+    M->>ST: get_recent() + search()
+    M->>LT: search()
+    M-->>A: 记忆上下文
+    
+    A->>L: chat(messages + 记忆上下文)
+    L-->>A: 响应
+    
+    Note over A,M: 位置3: 记录助手回复
+    A->>M: add_conversation("assistant", response)
+    
+    alt 任务成功
+        Note over A,M: 位置4: 记录任务结果
+        A->>M: add_task_result(task, result, success=True)
+        M->>ST: add(MemoryItem)
+        M->>LT: add(重要记忆)
+    else 任务失败
+        A->>M: add_task_result(task, error, success=False)
+    end
+    
+    A-->>U: 最终答案
+```
+
+### 记忆流转示意
+
+```
+用户输入 ──┬──► 短期记忆 (Redis) ───► 24小时后过期
+           │         │
+           │         ▼
+           │    重要性 ≥ 0.6?
+           │         │
+           │        Yes
+           │         ▼
+           └──► 长期记忆 (Milvus) ───► 永久存储
+                     │
+                     ▼
+              语义向量检索 ◄─── Embedding 模型
 ```
 
 **层级说明：**
@@ -231,9 +360,11 @@ flowchart TB
 | 层级 | 组件 | 说明 |
 |:---:|------|------|
 | **入口** | Solo / Workflow | 两种运行模式 |
-| **工具层** | Calculator, Search, FileOps, Agent Tools | 可调用的能力 |
+| **记忆层** | ShortTermMemory, LongTermMemory | 短期(Redis) + 长期(Milvus) |
+| **工具层** | Calculator, WebSearch, FileOps | 可调用的能力 |
 | **专家层** | ContentAgent, LayoutAgent, ... | 封装为工具的专业 Agent |
 | **LLM 层** | ModelScope, vLLM, OpenAI | 大语言模型后端 |
+| **存储层** | Redis, Milvus | 记忆持久化存储 |
 
 <details>
 <summary><b>目录结构</b></summary>
@@ -242,15 +373,22 @@ flowchart TB
 agent/
 ├── agents/                    # Agent 实现
 │   ├── base.py               #   BaseLLMAgent 基类
-│   ├── react_agent.py        #   ReAct Agent
+│   ├── react_agent.py        #   ReAct Agent（集成 Memory）
 │   └── crews/                #   专家 Agent
 │       └── resume/           #     简历相关（示例）
+│
+├── memory/                    # 记忆系统 ⭐ NEW
+│   ├── base.py               #   MemoryItem, MemoryType 定义
+│   ├── short_term.py         #   短期记忆（Redis）
+│   ├── long_term.py          #   长期记忆（Milvus 向量）
+│   └── manager.py            #   MemoryManager 统一管理
 │
 ├── tools/                     # 工具集
 │   ├── base.py               #   BaseTool 基类
 │   ├── builtin/              #   内置工具
 │   │   ├── calculator.py     #     计算器
-│   │   ├── search.py         #     搜索
+│   │   ├── search.py         #     搜索（离线演示）
+│   │   ├── web_search.py     #     联网搜索 ⭐ NEW
 │   │   └── file_ops.py       #     文件操作
 │   ├── agent_wrappers/       #   Agent 工具包装
 │   ├── generators/           #   生成器（示例）
@@ -293,14 +431,20 @@ agent/
 5. `agents/crews/resume/content_agent.py` - 专家 Agent 示例
 6. `tools/agent_wrappers/` - Agent-as-Tool 模式
 
-### Level 3: 工作流
-7. `workflows/base.py` - 工作流基类
-8. `workflows/resume_pipeline.py` - 完整工作流示例
+### Level 3: 记忆系统
+7. `memory/base.py` - 记忆数据结构定义
+8. `memory/short_term.py` - Redis 短期记忆
+9. `memory/long_term.py` - Milvus 向量长期记忆
+10. `memory/manager.py` - 统一记忆管理
 
-### Level 4: 扩展
-9. 添加自己的工具
-10. 添加自己的 Agent
-11. 添加自己的工作流
+### Level 4: 工作流
+11. `workflows/base.py` - 工作流基类
+12. `workflows/resume_pipeline.py` - 完整工作流示例
+
+### Level 5: 扩展
+13. 添加自己的工具
+14. 添加自己的 Agent
+15. 添加自己的工作流
 
 ---
 
@@ -380,6 +524,8 @@ python main.py solo -p "你好" --local
 | Tool System | 工具注册、调用、参数解析 |
 | Workflow | 专家流水线架构 |
 | Resume Example | 完整的多 Agent 协作示例 |
+| **Web Search** | 联网搜索（DuckDuckGo / Tavily） |
+| **Memory** | 短期记忆(Redis) + 长期记忆(Milvus) |
 
 ### 下一步：Skills 🎯
 
@@ -387,7 +533,6 @@ python main.py solo -p "你好" --local
 
 | Skill | Description | Priority |
 |-------|-------------|:--------:|
-| Web Search | 联网搜索（Tavily/Serper） | ⭐⭐⭐ |
 | Code Executor | 代码执行沙箱 | ⭐⭐⭐ |
 | File Manager | 文件读写、目录操作 | ⭐⭐⭐ |
 | Web Browser | 网页浏览和提取 | ⭐⭐ |
@@ -400,7 +545,6 @@ python main.py solo -p "你好" --local
 | Feature | Description |
 |---------|-------------|
 | Multi-Agent | 动态编排，Agent 自主协作 |
-| Memory | 短期上下文 + 长期向量记忆 |
 | RAG | 文档检索增强生成 |
 | Web UI | 交互面板、执行可视化 |
 | Evaluation | Agent 评测框架 |

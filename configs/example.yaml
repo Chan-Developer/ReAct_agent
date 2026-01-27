@@ -14,6 +14,31 @@ agent:
   max_rounds: 5
   output_dir: ./output
 
+# 联网搜索配置
+web_search:
+  provider: duckduckgo  # tavily（推荐）或 duckduckgo（免费）
+  tavily_api_key: ""    # 使用 Tavily 时填写，或设置环境变量 TAVILY_API_KEY
+  max_results: 5        # 返回搜索结果数量
+
+# Redis 配置（短期记忆）
+redis:
+  host: localhost
+  port: 6379
+  db: 0
+  password: ""
+
+# Milvus 配置（长期记忆）
+milvus:
+  host: localhost
+  port: 19530
+
+# 记忆系统配置
+memory:
+  enabled: true                 # 是否启用记忆
+  long_term_threshold: 0.6      # 重要性超过此值存入长期记忆
+  short_term_ttl: 86400         # 短期记忆过期时间（秒）
+  max_context_items: 5          # 注入 prompt 的最大记忆数
+
 # 日志配置
 logging:
   level: INFO  # DEBUG, INFO, WARNING, ERROR

@@ -62,12 +62,41 @@ class MilvusConfig:
 
 
 @dataclass
+class RedisConfig:
+    """Redis 配置"""
+    host: str = "localhost"
+    port: int = 6379
+    db: int = 0
+    password: str = ""
+
+
+@dataclass
+class MemoryConfig:
+    """记忆系统配置"""
+    enabled: bool = True
+    long_term_threshold: float = 0.6  # 重要性超过此值存入长期记忆
+    short_term_ttl: int = 86400       # 短期记忆过期时间（秒）
+    max_context_items: int = 5        # 注入 prompt 的最大记忆数
+
+
+@dataclass
+class WebSearchConfig:
+    """联网搜索配置"""
+    provider: str = "duckduckgo"  # tavily 或 duckduckgo
+    tavily_api_key: str = ""
+    max_results: int = 5
+
+
+@dataclass
 class Config:
     """全局配置"""
     log: LogConfig = field(default_factory=LogConfig)
     llm: LLMConfig = field(default_factory=LLMConfig)
     agent: AgentConfig = field(default_factory=AgentConfig)
     milvus: MilvusConfig = field(default_factory=MilvusConfig)
+    redis: RedisConfig = field(default_factory=RedisConfig)
+    memory: MemoryConfig = field(default_factory=MemoryConfig)
+    web_search: WebSearchConfig = field(default_factory=WebSearchConfig)
     
     @classmethod
     def load(cls, config_path: Optional[str] = None) -> "Config":
@@ -154,6 +183,40 @@ class Config:
                     self.milvus.port = int(milvus["port"])
                 if "alias" in milvus:
                     self.milvus.alias = milvus["alias"]
+            
+            # Web Search 配置
+            if "web_search" in data:
+                ws = data["web_search"]
+                if "provider" in ws:
+                    self.web_search.provider = ws["provider"]
+                if "tavily_api_key" in ws:
+                    self.web_search.tavily_api_key = ws["tavily_api_key"]
+                if "max_results" in ws:
+                    self.web_search.max_results = int(ws["max_results"])
+            
+            # Redis 配置
+            if "redis" in data:
+                redis = data["redis"]
+                if "host" in redis:
+                    self.redis.host = redis["host"]
+                if "port" in redis:
+                    self.redis.port = int(redis["port"])
+                if "db" in redis:
+                    self.redis.db = int(redis["db"])
+                if "password" in redis:
+                    self.redis.password = redis["password"]
+            
+            # Memory 配置
+            if "memory" in data:
+                mem = data["memory"]
+                if "enabled" in mem:
+                    self.memory.enabled = bool(mem["enabled"])
+                if "long_term_threshold" in mem:
+                    self.memory.long_term_threshold = float(mem["long_term_threshold"])
+                if "short_term_ttl" in mem:
+                    self.memory.short_term_ttl = int(mem["short_term_ttl"])
+                if "max_context_items" in mem:
+                    self.memory.max_context_items = int(mem["max_context_items"])
                     
         except ImportError:
             pass  # 没有 PyYAML 就跳过
@@ -187,6 +250,28 @@ class Config:
             self.milvus.port = int(os.getenv("MILVUS_PORT", "19530"))
         if os.getenv("MILVUS_ALIAS"):
             self.milvus.alias = os.getenv("MILVUS_ALIAS", "default")
+        
+        # Web Search 配置
+        if os.getenv("TAVILY_API_KEY"):
+            self.web_search.tavily_api_key = os.getenv("TAVILY_API_KEY", "")
+        if os.getenv("WEB_SEARCH_PROVIDER"):
+            self.web_search.provider = os.getenv("WEB_SEARCH_PROVIDER", "duckduckgo")
+        if os.getenv("WEB_SEARCH_MAX_RESULTS"):
+            self.web_search.max_results = int(os.getenv("WEB_SEARCH_MAX_RESULTS", "5"))
+        
+        # Redis 配置
+        if os.getenv("REDIS_HOST"):
+            self.redis.host = os.getenv("REDIS_HOST", "localhost")
+        if os.getenv("REDIS_PORT"):
+            self.redis.port = int(os.getenv("REDIS_PORT", "6379"))
+        if os.getenv("REDIS_PASSWORD"):
+            self.redis.password = os.getenv("REDIS_PASSWORD", "")
+        
+        # Memory 配置
+        if os.getenv("MEMORY_ENABLED"):
+            self.memory.enabled = os.getenv("MEMORY_ENABLED", "true").lower() == "true"
+        if os.getenv("MEMORY_LONG_TERM_THRESHOLD"):
+            self.memory.long_term_threshold = float(os.getenv("MEMORY_LONG_TERM_THRESHOLD", "0.6"))
 
 
 # 全局配置实例（延迟加载）

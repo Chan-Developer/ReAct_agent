@@ -19,6 +19,7 @@ from .registry import ToolRegistry
 
 # 内置工具
 from .builtin import Calculator, Search, AddFile, ReadFile
+from .builtin import TavilySearch, DuckDuckGoSearch, WebSearch
 
 # 生成器工具
 from .generators import ResumeGenerator, ContentEstimator, LayoutOptimizer, PageSplitter
@@ -40,6 +41,11 @@ __all__ = [
     "Search",
     "AddFile",
     "ReadFile",
+    
+    # 联网搜索工具
+    "TavilySearch",
+    "DuckDuckGoSearch",
+    "WebSearch",
     
     # 生成器
     "ResumeGenerator",

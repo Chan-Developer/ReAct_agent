@@ -20,6 +20,7 @@ from core.parser import parse_tool_calls
 if TYPE_CHECKING:
     from tools import ToolRegistry
     from tools.base import BaseTool
+    from memory import MemoryManager
 
 logger = get_logger(__name__)
 
@@ -51,8 +52,10 @@ class ReactAgent:
         llm: LLMProtocol,
         tools: Optional[List["BaseTool"]] = None,
         tool_registry: Optional["ToolRegistry"] = None,
+        memory: Optional["MemoryManager"] = None,
         max_rounds: int = 5, 
         project_directory: str = ".",
+        use_memory_context: bool = True,
     ):
         """初始化 Agent。
         
@@ -60,12 +63,16 @@ class ReactAgent:
             llm: LLM 接口实例
             tools: 工具列表
             tool_registry: 工具注册器（与 tools 二选一）
+            memory: 记忆管理器（可选）
             max_rounds: 最大迭代轮数
             project_directory: 项目目录
+            use_memory_context: 是否在 prompt 中注入记忆上下文
         """
         self.llm = llm
         self.max_rounds = max_rounds
         self.project_directory = project_directory
+        self.memory = memory
+        self.use_memory_context = use_memory_context
         
         # 初始化工具注册器
         self.tool_registry = self._init_registry(tools, tool_registry)
@@ -74,7 +81,8 @@ class ReactAgent:
         self.conversation = Conversation()
         self._system_prompt: Optional[str] = None
         
-        logger.info(f"ReactAgent 初始化完成，已注册 {len(self.tool_registry)} 个工具")
+        memory_status = "已启用" if memory else "未启用"
+        logger.info(f"ReactAgent 初始化完成，已注册 {len(self.tool_registry)} 个工具，记忆: {memory_status}")
 
     def _init_registry(
         self,
@@ -105,8 +113,12 @@ class ReactAgent:
         """
         logger.info(f"处理用户输入: {user_input}")
         
+        # 记录用户输入到记忆
+        if self.memory:
+            self.memory.add_conversation("user", user_input, importance=0.4)
+        
         self.conversation.add_user(user_input)
-        self._system_prompt = self._render_system_prompt()
+        self._system_prompt = self._render_system_prompt(user_input)
 
         for round_num in range(1, self.max_rounds + 1):
             logger.info(f"====== 第 {round_num}/{self.max_rounds} 轮 ======")
@@ -115,6 +127,14 @@ class ReactAgent:
                 response = self._think()
             except Exception as e:
                 logger.error(f"LLM 调用失败: {e}", exc_info=True)
+                # 记录失败到记忆
+                if self.memory:
+                    self.memory.add_task_result(
+                        task=user_input[:100],
+                        result=str(e),
+                        success=False,
+                        importance=0.6
+                    )
                 return f"抱歉，处理过程中出现错误: {e}"
 
             content = response.get("content", "")
@@ -138,20 +158,41 @@ class ReactAgent:
             # 检查最终答案
             if "final_answer" in content.lower():
                 self.conversation.add_assistant(content)
+                # 记录成功完成的任务
+                if self.memory:
+                    self.memory.add_conversation("assistant", content[:500], importance=0.5)
+                    self.memory.add_task_result(
+                        task=user_input[:100],
+                        result="任务完成",
+                        success=True,
+                        importance=0.5
+                    )
                 logger.info("任务完成")
                 return content
 
             self.conversation.add_assistant(content)
+            
+            # 记录助手回复
+            if self.memory:
+                self.memory.add_conversation("assistant", content[:500], importance=0.3)
             
             if round_num == self.max_rounds:
                 return content
             
         return "达到最大迭代次数，任务可能未完成。"
     
-    def reset(self) -> None:
-        """重置对话历史"""
+    def reset(self, new_session: bool = False) -> None:
+        """重置对话历史。
+        
+        Args:
+            new_session: 是否同时开启新的记忆会话
+        """
         self.conversation.clear()
         self._system_prompt = None
+        
+        if new_session and self.memory:
+            self.memory.new_session()
+            logger.info("已开启新的记忆会话")
 
     def _think(self) -> Dict[str, Any]:
         """调用 LLM"""
@@ -187,13 +228,30 @@ class ReactAgent:
             logger.error(traceback.format_exc())
             return f"❌ 执行失败: {e}"
 
-    def _render_system_prompt(self) -> str:
-        """渲染系统提示"""
-        return Template(REACT_SYSTEM_PROMPT).substitute(
+    def _render_system_prompt(self, user_input: str = "") -> str:
+        """渲染系统提示。
+        
+        Args:
+            user_input: 用户输入（用于检索相关记忆）
+        """
+        # 基础 prompt
+        base_prompt = Template(REACT_SYSTEM_PROMPT).substitute(
             operating_system=self._get_os_name(),
             tool_list=self._format_tools(),
             file_list=self._get_files(),
         )
+        
+        # 注入记忆上下文
+        if self.memory and self.use_memory_context and user_input:
+            memory_context = self.memory.get_context(
+                query=user_input,
+                max_items=3,
+                include_recent=2,
+            )
+            if memory_context:
+                base_prompt += f"\n\n## 记忆上下文\n{memory_context}"
+        
+        return base_prompt
 
     def _format_tools(self) -> str:
         """格式化工具列表"""

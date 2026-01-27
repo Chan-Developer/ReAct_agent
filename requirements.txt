@@ -2,6 +2,9 @@
 requests>=2.31.0
 openai>=1.0.0
 
+# Web search (for WebSearch tool)
+ddgs>=6.0.0
+
 # Optional: for better logging
 coloredlogs>=15.0
 
@@ -10,6 +13,9 @@ python-docx>=1.1.0
 
 # Vector database (for Milvus tool)
 pymilvus>=2.3.0
+
+# Redis (for ShortTermMemory)
+redis>=5.0.0
 
 # Development dependencies (optional)
 # pytest>=7.4.0
