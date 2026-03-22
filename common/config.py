@@ -1,28 +1,28 @@
 # -*- coding: utf-8 -*-
-"""配置管理。
+"""Configuration loading utilities.
 
-支持从 YAML 配置文件和环境变量加载配置。
-优先级: 环境变量 > 配置文件 > 默认值
+Priority: environment variables > YAML file > default values.
 """
+
+from __future__ import annotations
+
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-# 项目根目录
+
 PROJECT_ROOT = Path(__file__).parent.parent
 
 
 @dataclass
 class LogConfig:
-    """日志配置"""
     level: str = "INFO"
     format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 
 @dataclass
 class ModelScopeConfig:
-    """ModelScope 配置"""
     api_key: str = ""
     base_url: str = "https://api-inference.modelscope.cn/v1"
     model: str = "Qwen/Qwen3-32B"
@@ -30,15 +30,13 @@ class ModelScopeConfig:
 
 @dataclass
 class VllmConfig:
-    """vLLM 本地服务配置"""
     base_url: str = "http://localhost:8000/v1"
     model: str = "Qwen3-8B"
 
 
 @dataclass
 class LLMConfig:
-    """LLM 通用配置"""
-    provider: str = "modelscope"  # modelscope 或 vllm
+    provider: str = "modelscope"  # modelscope or vllm
     temperature: float = 0.7
     max_tokens: int = 1024
     timeout: int = 120
@@ -48,14 +46,12 @@ class LLMConfig:
 
 @dataclass
 class AgentConfig:
-    """Agent 配置"""
     max_rounds: int = 5
     output_dir: str = "./output"
 
 
 @dataclass
 class MilvusConfig:
-    """Milvus 向量数据库配置"""
     host: str = "localhost"
     port: int = 19530
     alias: str = "default"
@@ -63,7 +59,6 @@ class MilvusConfig:
 
 @dataclass
 class RedisConfig:
-    """Redis 配置"""
     host: str = "localhost"
     port: int = 6379
     db: int = 0
@@ -72,24 +67,21 @@ class RedisConfig:
 
 @dataclass
 class MemoryConfig:
-    """记忆系统配置"""
     enabled: bool = True
-    long_term_threshold: float = 0.6  # 重要性超过此值存入长期记忆
-    short_term_ttl: int = 86400       # 短期记忆过期时间（秒）
-    max_context_items: int = 5        # 注入 prompt 的最大记忆数
+    long_term_threshold: float = 0.6
+    short_term_ttl: int = 86400
+    max_context_items: int = 5
 
 
 @dataclass
 class WebSearchConfig:
-    """联网搜索配置"""
-    provider: str = "duckduckgo"  # tavily 或 duckduckgo
+    provider: str = "duckduckgo"  # tavily or duckduckgo
     tavily_api_key: str = ""
     max_results: int = 5
 
 
 @dataclass
 class Config:
-    """全局配置"""
     log: LogConfig = field(default_factory=LogConfig)
     llm: LLMConfig = field(default_factory=LLMConfig)
     agent: AgentConfig = field(default_factory=AgentConfig)
@@ -97,43 +89,77 @@ class Config:
     redis: RedisConfig = field(default_factory=RedisConfig)
     memory: MemoryConfig = field(default_factory=MemoryConfig)
     web_search: WebSearchConfig = field(default_factory=WebSearchConfig)
-    
+
     @classmethod
     def load(cls, config_path: Optional[str] = None) -> "Config":
-        """加载配置。
-        
-        优先级: 环境变量 > 配置文件 > 默认值
-        
-        Args:
-            config_path: 配置文件路径（可选）
-            
-        Returns:
-            Config 实例
-        """
         config = cls()
-        
-        # 1. 尝试从配置文件加载
+        config._load_dotenv()
+
         if config_path is None:
             config_path = PROJECT_ROOT / "configs" / "config.yaml"
         else:
             config_path = Path(config_path)
-            
+
         if config_path.exists():
             config._load_from_yaml(config_path)
-        
-        # 2. 环境变量覆盖（优先级最高）
+
         config._load_from_env()
-        
         return config
-    
+
+    def _load_dotenv(self) -> None:
+        """Load .env values into os.environ without overriding existing env."""
+        candidates = [PROJECT_ROOT / ".env"]
+        cwd_env = Path.cwd() / ".env"
+        if cwd_env not in candidates:
+            candidates.append(cwd_env)
+
+        # Preferred parser if installed.
+        try:
+            from dotenv import load_dotenv
+
+            for env_path in candidates:
+                if env_path.exists():
+                    load_dotenv(dotenv_path=env_path, override=False, encoding="utf-8")
+            return
+        except Exception:
+            pass
+
+        # Fallback parser.
+        for env_path in candidates:
+            if not env_path.exists():
+                continue
+            try:
+                with open(env_path, "r", encoding="utf-8") as f:
+                    for raw in f:
+                        line = raw.strip()
+                        if not line or line.startswith("#"):
+                            continue
+                        if line.startswith("export "):
+                            line = line[7:].strip()
+                        if "=" not in line:
+                            continue
+
+                        key, value = line.split("=", 1)
+                        key = key.strip()
+                        value = value.strip()
+
+                        if (value.startswith('"') and value.endswith('"')) or (
+                            value.startswith("'") and value.endswith("'")
+                        ):
+                            value = value[1:-1]
+
+                        if key:
+                            os.environ.setdefault(key, value)
+            except Exception:
+                pass
+
     def _load_from_yaml(self, path: Path) -> None:
-        """从 YAML 文件加载配置。"""
         try:
             import yaml
+
             with open(path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f) or {}
-            
-            # LLM 配置
+
             if "llm" in data:
                 llm = data["llm"]
                 if "provider" in llm:
@@ -142,8 +168,7 @@ class Config:
                     self.llm.temperature = float(llm["temperature"])
                 if "max_tokens" in llm:
                     self.llm.max_tokens = int(llm["max_tokens"])
-                    
-                # ModelScope 配置
+
                 if "modelscope" in llm:
                     ms = llm["modelscope"]
                     if "api_key" in ms:
@@ -152,29 +177,24 @@ class Config:
                         self.llm.modelscope.base_url = ms["base_url"]
                     if "model" in ms:
                         self.llm.modelscope.model = ms["model"]
-                
-                # vLLM 配置
+
                 if "vllm" in llm:
                     vl = llm["vllm"]
                     if "base_url" in vl:
                         self.llm.vllm.base_url = vl["base_url"]
                     if "model" in vl:
                         self.llm.vllm.model = vl["model"]
-            
-            # Agent 配置
+
             if "agent" in data:
                 agent = data["agent"]
                 if "max_rounds" in agent:
                     self.agent.max_rounds = int(agent["max_rounds"])
                 if "output_dir" in agent:
                     self.agent.output_dir = agent["output_dir"]
-            
-            # 日志配置
-            if "logging" in data:
-                if "level" in data["logging"]:
-                    self.log.level = data["logging"]["level"]
-            
-            # Milvus 配置
+
+            if "logging" in data and "level" in data["logging"]:
+                self.log.level = data["logging"]["level"]
+
             if "milvus" in data:
                 milvus = data["milvus"]
                 if "host" in milvus:
@@ -183,8 +203,7 @@ class Config:
                     self.milvus.port = int(milvus["port"])
                 if "alias" in milvus:
                     self.milvus.alias = milvus["alias"]
-            
-            # Web Search 配置
+
             if "web_search" in data:
                 ws = data["web_search"]
                 if "provider" in ws:
@@ -193,8 +212,7 @@ class Config:
                     self.web_search.tavily_api_key = ws["tavily_api_key"]
                 if "max_results" in ws:
                     self.web_search.max_results = int(ws["max_results"])
-            
-            # Redis 配置
+
             if "redis" in data:
                 redis = data["redis"]
                 if "host" in redis:
@@ -205,8 +223,7 @@ class Config:
                     self.redis.db = int(redis["db"])
                 if "password" in redis:
                     self.redis.password = redis["password"]
-            
-            # Memory 配置
+
             if "memory" in data:
                 mem = data["memory"]
                 if "enabled" in mem:
@@ -217,23 +234,20 @@ class Config:
                     self.memory.short_term_ttl = int(mem["short_term_ttl"])
                 if "max_context_items" in mem:
                     self.memory.max_context_items = int(mem["max_context_items"])
-                    
+
         except ImportError:
-            pass  # 没有 PyYAML 就跳过
+            pass
         except Exception:
-            pass  # 配置文件解析失败就跳过
-    
+            pass
+
     def _load_from_env(self) -> None:
-        """从环境变量加载配置。"""
-        # ModelScope API Key（环境变量优先）
         if os.getenv("MODELSCOPE_API_KEY"):
             self.llm.modelscope.api_key = os.getenv("MODELSCOPE_API_KEY", "")
         if os.getenv("MODELSCOPE_BASE_URL"):
             self.llm.modelscope.base_url = os.getenv("MODELSCOPE_BASE_URL", "")
         if os.getenv("MODELSCOPE_MODEL"):
             self.llm.modelscope.model = os.getenv("MODELSCOPE_MODEL", "")
-            
-        # 其他配置
+
         if os.getenv("LOG_LEVEL"):
             self.log.level = os.getenv("LOG_LEVEL", "INFO")
         if os.getenv("LLM_TEMPERATURE"):
@@ -242,44 +256,40 @@ class Config:
             self.llm.max_tokens = int(os.getenv("LLM_MAX_TOKENS", "1024"))
         if os.getenv("AGENT_MAX_ROUNDS"):
             self.agent.max_rounds = int(os.getenv("AGENT_MAX_ROUNDS", "5"))
-        
-        # Milvus 配置
+
         if os.getenv("MILVUS_HOST"):
             self.milvus.host = os.getenv("MILVUS_HOST", "localhost")
         if os.getenv("MILVUS_PORT"):
             self.milvus.port = int(os.getenv("MILVUS_PORT", "19530"))
         if os.getenv("MILVUS_ALIAS"):
             self.milvus.alias = os.getenv("MILVUS_ALIAS", "default")
-        
-        # Web Search 配置
+
         if os.getenv("TAVILY_API_KEY"):
             self.web_search.tavily_api_key = os.getenv("TAVILY_API_KEY", "")
         if os.getenv("WEB_SEARCH_PROVIDER"):
             self.web_search.provider = os.getenv("WEB_SEARCH_PROVIDER", "duckduckgo")
         if os.getenv("WEB_SEARCH_MAX_RESULTS"):
             self.web_search.max_results = int(os.getenv("WEB_SEARCH_MAX_RESULTS", "5"))
-        
-        # Redis 配置
+
         if os.getenv("REDIS_HOST"):
             self.redis.host = os.getenv("REDIS_HOST", "localhost")
         if os.getenv("REDIS_PORT"):
             self.redis.port = int(os.getenv("REDIS_PORT", "6379"))
         if os.getenv("REDIS_PASSWORD"):
             self.redis.password = os.getenv("REDIS_PASSWORD", "")
-        
-        # Memory 配置
+
         if os.getenv("MEMORY_ENABLED"):
             self.memory.enabled = os.getenv("MEMORY_ENABLED", "true").lower() == "true"
         if os.getenv("MEMORY_LONG_TERM_THRESHOLD"):
-            self.memory.long_term_threshold = float(os.getenv("MEMORY_LONG_TERM_THRESHOLD", "0.6"))
+            self.memory.long_term_threshold = float(
+                os.getenv("MEMORY_LONG_TERM_THRESHOLD", "0.6")
+            )
 
 
-# 全局配置实例（延迟加载）
 _config: Optional[Config] = None
 
 
 def get_config() -> Config:
-    """获取全局配置实例。"""
     global _config
     if _config is None:
         _config = Config.load()
@@ -287,7 +297,6 @@ def get_config() -> Config:
 
 
 def reload_config(config_path: Optional[str] = None) -> Config:
-    """重新加载配置。"""
     global _config
     _config = Config.load(config_path)
     return _config

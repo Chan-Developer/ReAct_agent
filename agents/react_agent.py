@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
-"""ReAct Agent 模块。
+"""ReAct agent implementation (Reasoning + Acting)."""
 
-实现 ReAct（Reasoning + Acting）风格的智能代理。
-用于 Solo 模式。
-"""
 from __future__ import annotations
 
 import os
@@ -11,9 +8,8 @@ import platform
 from string import Template
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Protocol
 
-from common import get_config, get_logger
+from common import get_logger
 from prompts import REACT_SYSTEM_PROMPT
-
 from core.message import Conversation
 from core.parser import parse_tool_calls
 
@@ -28,264 +24,235 @@ __all__ = ["ReactAgent"]
 
 
 class LLMProtocol(Protocol):
-    """LLM 接口协议"""
-    def chat(self, messages: List[Dict[str, Any]], **kwargs) -> Dict[str, Any]: ...
+    """Protocol for chat-based LLM clients."""
+
+    def chat(self, messages: List[Dict[str, Any]], **kwargs) -> Dict[str, Any]:
+        ...
 
 
 class ReactAgent:
-    """ReAct 风格智能代理。
-    
-    实现"思考 → 行动 → 观察 → 最终答案"的循环。
-    用于 Solo 模式（单 Agent）。
-    
-    Example:
-        >>> from llm import ModelScopeOpenAI
-        >>> from tools import Calculator
-        >>> 
-        >>> llm = ModelScopeOpenAI()
-        >>> agent = ReactAgent(llm=llm, tools=[Calculator()])
-        >>> response = agent.run("计算 3*7+2")
-    """
-    
+    """Single-agent ReAct loop with optional tool use and memory context."""
+
     def __init__(
-        self, 
+        self,
         llm: LLMProtocol,
         tools: Optional[List["BaseTool"]] = None,
         tool_registry: Optional["ToolRegistry"] = None,
         memory: Optional["MemoryManager"] = None,
-        max_rounds: int = 5, 
+        max_rounds: int = 5,
         project_directory: str = ".",
         use_memory_context: bool = True,
+        auto_finish: bool = True,
+        max_stall_rounds: int = 2,
     ):
-        """初始化 Agent。
-        
-        Args:
-            llm: LLM 接口实例
-            tools: 工具列表
-            tool_registry: 工具注册器（与 tools 二选一）
-            memory: 记忆管理器（可选）
-            max_rounds: 最大迭代轮数
-            project_directory: 项目目录
-            use_memory_context: 是否在 prompt 中注入记忆上下文
-        """
         self.llm = llm
-        self.max_rounds = max_rounds
+        self.max_rounds = max(1, max_rounds)
         self.project_directory = project_directory
         self.memory = memory
         self.use_memory_context = use_memory_context
-        
-        # 初始化工具注册器
+        self.auto_finish = auto_finish
+        self.max_stall_rounds = max(1, max_stall_rounds)
+
         self.tool_registry = self._init_registry(tools, tool_registry)
-        
-        # 对话管理
         self.conversation = Conversation()
         self._system_prompt: Optional[str] = None
-        
-        memory_status = "已启用" if memory else "未启用"
-        logger.info(f"ReactAgent 初始化完成，已注册 {len(self.tool_registry)} 个工具，记忆: {memory_status}")
+
+        memory_status = "enabled" if memory else "disabled"
+        logger.info(
+            f"ReactAgent initialized, tools={len(self.tool_registry)}, memory={memory_status}"
+        )
 
     def _init_registry(
         self,
         tools: Optional[List["BaseTool"]],
         registry: Optional["ToolRegistry"],
     ) -> "ToolRegistry":
-        """初始化工具注册器"""
         from tools import ToolRegistry
-        
+
         if registry is not None:
             return registry
-        
+
         reg = ToolRegistry()
         if tools:
             reg.register_tools(tools)
         else:
-            logger.warning("未提供工具，Agent 将在无工具模式下运行")
+            logger.warning("No tools provided. Agent will run in no-tool mode.")
         return reg
 
     def run(self, user_input: str) -> str:
-        """执行用户请求。
-        
-        Args:
-            user_input: 用户输入
-            
-        Returns:
-            Agent 的最终回答
-        """
-        logger.info(f"处理用户输入: {user_input}")
-        
-        # 记录用户输入到记忆
+        """Run one request through ReAct loop."""
+        logger.info(f"Handling user input: {user_input}")
+
         if self.memory:
             self.memory.add_conversation("user", user_input, importance=0.4)
-        
+
         self.conversation.add_user(user_input)
         self._system_prompt = self._render_system_prompt(user_input)
 
+        previous_non_tool_content = ""
+        stall_rounds = 0
+
         for round_num in range(1, self.max_rounds + 1):
-            logger.info(f"====== 第 {round_num}/{self.max_rounds} 轮 ======")
-            
+            logger.info(f"Round {round_num}/{self.max_rounds}")
+
             try:
                 response = self._think()
-            except Exception as e:
-                logger.error(f"LLM 调用失败: {e}", exc_info=True)
-                # 记录失败到记忆
+            except Exception as exc:
+                logger.error(f"LLM call failed: {exc}", exc_info=True)
                 if self.memory:
                     self.memory.add_task_result(
                         task=user_input[:100],
-                        result=str(e),
+                        result=str(exc),
                         success=False,
-                        importance=0.6
+                        importance=0.6,
                     )
-                return f"抱歉，处理过程中出现错误: {e}"
+                return f"Error while processing request: {exc}"
 
             content = response.get("content", "")
-            logger.info(f"LLM 响应: {content[:200]}...")
-            
-            # 解析工具调用
-            tool_calls = parse_tool_calls(response)
-            
-            if tool_calls is None:
-                logger.debug("未检测到工具调用")
-            
-            if tool_calls:
-                self.conversation.add_assistant(content, [
-                    {"name": tc.name, "arguments": tc.arguments}
-                    for tc in tool_calls
-                ])
-                logger.info(f"执行 {len(tool_calls)} 个工具调用")
-                self._execute_tools(tool_calls)
-                continue  
+            logger.info(f"LLM response: {content[:200]}...")
 
-            # 检查最终答案
-            if "final_answer" in content.lower():
+            tool_calls = parse_tool_calls(response)
+            if tool_calls:
+                self.conversation.add_assistant(
+                    content,
+                    [{"name": tc.name, "arguments": tc.arguments} for tc in tool_calls],
+                )
+                logger.info(f"Executing {len(tool_calls)} tool call(s)")
+                self._execute_tools(tool_calls)
+                previous_non_tool_content = ""
+                stall_rounds = 0
+                continue
+
+            if self._is_final_answer(content):
                 self.conversation.add_assistant(content)
-                # 记录成功完成的任务
                 if self.memory:
                     self.memory.add_conversation("assistant", content[:500], importance=0.5)
                     self.memory.add_task_result(
                         task=user_input[:100],
-                        result="任务完成",
+                        result="Task completed",
                         success=True,
-                        importance=0.5
+                        importance=0.5,
                     )
-                logger.info("任务完成")
+                logger.info("Task completed by explicit final marker")
                 return content
 
             self.conversation.add_assistant(content)
-            
-            # 记录助手回复
             if self.memory:
                 self.memory.add_conversation("assistant", content[:500], importance=0.3)
-            
+
+            normalized = (content or "").strip()
+            if normalized and normalized == previous_non_tool_content:
+                stall_rounds += 1
+            elif normalized:
+                stall_rounds = 0
+                previous_non_tool_content = normalized
+
+            if self._should_auto_finish(round_num, normalized, stall_rounds):
+                logger.info("Task completed by auto-finish strategy")
+                return content
+
             if round_num == self.max_rounds:
                 return content
-            
-        return "达到最大迭代次数，任务可能未完成。"
-    
+
+        return "Reached max rounds; task may be incomplete."
+
+    def _is_final_answer(self, content: str) -> bool:
+        return "final_answer" in (content or "").lower()
+
+    def _should_auto_finish(self, round_num: int, content: str, stall_rounds: int) -> bool:
+        if not self.auto_finish:
+            return False
+        if not content:
+            return False
+        if "action:" in content.lower():
+            return False
+        if stall_rounds >= self.max_stall_rounds - 1:
+            return True
+        if len(self.tool_registry) == 0:
+            return True
+        return round_num > 1
+
     def reset(self, new_session: bool = False) -> None:
-        """重置对话历史。
-        
-        Args:
-            new_session: 是否同时开启新的记忆会话
-        """
+        """Reset in-memory conversation state."""
         self.conversation.clear()
         self._system_prompt = None
-        
         if new_session and self.memory:
             self.memory.new_session()
-            logger.info("已开启新的记忆会话")
+            logger.info("Started a new memory session")
 
     def _think(self) -> Dict[str, Any]:
-        """调用 LLM"""
         messages = [{"role": "system", "content": self._system_prompt}]
         messages.extend(self.conversation.to_list())
         return self.llm.chat(messages)
 
     def _execute_tools(self, tool_calls) -> None:
-        """执行工具调用"""
         for tc in tool_calls:
             result = self._execute_single_tool(tc.name, tc.arguments)
             self.conversation.add_tool_result(tc.name, str(result))
 
     def _execute_single_tool(self, name: str, args: dict) -> str:
-        """执行单个工具"""
-        logger.info(f"执行工具: {name}")
-        logger.debug(f"工具参数: {list(args.keys())}")
-        
+        logger.info(f"Executing tool: {name}")
         tool = self.tool_registry.get(name)
         if tool is None:
-            return f"❌ 未找到工具 '{name}'"
-        
+            return f"Tool not found: '{name}'"
+
         try:
             result = tool.execute(**args)
-            logger.debug(f"工具结果: {str(result)[:200]}...")
+            logger.debug(f"Tool result: {str(result)[:200]}...")
             return result
-        except TypeError as e:
-            logger.error(f"工具参数错误: {e}")
-            return f"❌ 参数错误: {e}"
-        except Exception as e:
-            logger.error(f"工具执行异常: {type(e).__name__}: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
-            return f"❌ 执行失败: {e}"
+        except TypeError as exc:
+            logger.error(f"Tool argument error: {exc}")
+            return f"Tool argument error: {exc}"
+        except Exception as exc:
+            logger.error(f"Tool execution error: {type(exc).__name__}: {exc}", exc_info=True)
+            return f"Tool execution error: {exc}"
 
     def _render_system_prompt(self, user_input: str = "") -> str:
-        """渲染系统提示。
-        
-        Args:
-            user_input: 用户输入（用于检索相关记忆）
-        """
-        # 基础 prompt
         base_prompt = Template(REACT_SYSTEM_PROMPT).substitute(
             operating_system=self._get_os_name(),
             tool_list=self._format_tools(),
             file_list=self._get_files(),
         )
-        
-        # 注入记忆上下文
+
         if self.memory and self.use_memory_context and user_input:
-            memory_context = self.memory.get_context(
-                query=user_input,
-                max_items=3,
-                include_recent=2,
-            )
+            memory_context = self.memory.get_context(query=user_input, max_items=3, include_recent=2)
             if memory_context:
                 base_prompt += f"\n\n## 记忆上下文\n{memory_context}"
-        
+
         return base_prompt
 
     def _format_tools(self) -> str:
-        """格式化工具列表"""
         tools = self.tool_registry.get_all()
         if not tools:
-            return "无可用工具"
-        
-        lines = []
+            return "No tools available."
+
+        lines: List[str] = []
         for tool in tools:
             spec = tool.as_function_spec()
-            params = spec.get('parameters', {}).get('properties', {})
-            param_str = ", ".join(
-                f"{k}: {v.get('description', '')}" 
-                for k, v in params.items()
-            ) or "无参数"
-            lines.append(f"- {spec['name']}: {spec['description']}\n  参数: {param_str}")
+            params = spec.get("parameters", {}).get("properties", {})
+            param_str = ", ".join(f"{k}: {v.get('description', '')}" for k, v in params.items()) or "none"
+            lines.append(f"- {spec['name']}: {spec['description']}\n  params: {param_str}")
         return "\n".join(lines)
 
     def _get_files(self) -> str:
-        """获取项目文件列表"""
         try:
-            files = [f for f in os.listdir(self.project_directory) 
-                     if os.path.isfile(os.path.join(self.project_directory, f))]
-            return ", ".join(files[:10]) if files else "无文件"
+            files = [
+                f
+                for f in os.listdir(self.project_directory)
+                if os.path.isfile(os.path.join(self.project_directory, f))
+            ]
+            return ", ".join(files[:10]) if files else "No files."
         except Exception:
-            return "无法获取"
+            return "Unavailable"
 
     @staticmethod
     def _get_os_name() -> str:
-        return {"Darwin": "macOS", "Windows": "Windows", "Linux": "Linux"}.get(
-            platform.system(), "Unknown"
-        )
+        return {
+            "Darwin": "macOS",
+            "Windows": "Windows",
+            "Linux": "Linux",
+        }.get(platform.system(), "Unknown")
 
 
-# 向后兼容别名
 Agent = ReactAgent
 

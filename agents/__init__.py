@@ -18,6 +18,7 @@ from .base import BaseLLMAgent
 
 # Solo 模式
 from .react_agent import ReactAgent, Agent
+from .plan_execute_reflect_agent import PlanExecuteReflectAgent, PERAgent
 
 # 专家 Agent（供 Workflow 使用）
 from .crews.resume.content_agent import ContentAgent
@@ -29,6 +30,8 @@ __all__ = [
     # Solo 模式
     "ReactAgent",
     "Agent",
+    "PlanExecuteReflectAgent",
+    "PERAgent",
     # 专家 Agent
     "ContentAgent",
     "LayoutAgent",

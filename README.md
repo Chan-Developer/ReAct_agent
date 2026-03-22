@@ -47,6 +47,32 @@ python main.py solo -p "搜索 Python 是什么"
 
 ---
 
+## Latest Update (2026-03-22)
+
+- Added `per` mode (`Plan-Execute-Reflect`) on top of existing `solo/workflow`.
+- Refactored `ReactAgent` with safer completion behavior:
+  - Keeps hard safety bounds (`max_rounds`)
+  - Supports auto-finish when no further tool action is needed
+  - Prevents obvious stalled loops with repeated non-tool responses
+
+### New CLI Mode
+
+```bash
+# Plan -> Execute (with ReAct) -> Reflect
+python main.py per -p "计算 1+1"
+
+# With resume toolset
+python main.py per -p "优化并生成简历" --resume @data/sample_resume.json --jd data/sample_job.txt
+```
+
+### Engineering Notes
+
+- Low coupling: new architecture is isolated in `agents/plan_execute_reflect_agent.py`.
+- High cohesion: step planning/execution/reflection is encapsulated in one controller class.
+- Backward compatible: `solo`, `workflow`, `multi` entry points are preserved.
+
+---
+
 ## Core Concepts
 
 ### 1. ReAct Agent
