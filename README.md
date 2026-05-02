@@ -47,6 +47,29 @@ python main.py solo -p "搜索 Python 是什么"
 
 ---
 
+## Latest Update (2026-05-01)
+
+- Upgraded `ReactAgent` to prefer native structured tool calling when the LLM supports it.
+- Added tool-call validation in `ToolRegistry` to reject missing required fields and obvious type mismatches before execution.
+- Preserved the old text-based `Action: {...}` parsing path as a fallback for models that do not support native tool calling.
+- Extended conversation messages to carry assistant `tool_calls` and `tool` results in structured form, which is a better foundation for future harness/session work.
+
+### What Changed
+
+- `ReactAgent` now detects whether the current LLM supports native tool calling.
+- `ModelScopeOpenAI` now returns native `tool_calls` in the response payload.
+- `VllmLLM` stays on the compatibility path and continues using text-driven tool invocation.
+- Tool execution now validates arguments before calling `tool.execute(...)`.
+
+### What It Can Do Now
+
+- Run the original ReAct flow with text `Action: {...}` outputs.
+- Run a more reliable structured tool-calling flow with OpenAI-compatible providers.
+- Block malformed tool arguments before they become runtime errors.
+- Keep compatibility with the current `solo / per / workflow` entry points.
+
+---
+
 ## Latest Update (2026-03-22)
 
 - Added `per` mode (`Plan-Execute-Reflect`) on top of existing `solo/workflow`.

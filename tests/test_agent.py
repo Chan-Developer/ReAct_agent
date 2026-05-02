@@ -11,11 +11,14 @@ from tools import Calculator, ToolRegistry
 class MockLLM:
     """Simple sequential mock LLM."""
 
-    def __init__(self, responses):
+    def __init__(self, responses, supports_native_tool_calling=False):
         self.responses = responses
         self.call_count = 0
+        self.supports_native_tool_calling = supports_native_tool_calling
+        self.calls = []
 
     def chat(self, messages, **kwargs):
+        self.calls.append({"messages": messages, "kwargs": kwargs})
         response = self.responses[min(self.call_count, len(self.responses) - 1)]
         self.call_count += 1
         return response
@@ -63,6 +66,57 @@ class TestReactAgent:
         result = agent.run("calculate 1+1")
         assert result == "The result is 2."
 
+    def test_native_tool_call_flow(self):
+        responses = [
+            {
+                "content": "",
+                "tool_calls": [
+                    {
+                        "id": "call_1",
+                        "function": {
+                            "name": "calculator",
+                            "arguments": '{"expression": "1+1"}',
+                        },
+                    }
+                ],
+            },
+            {"content": "final_answer: 1+1 = 2"},
+        ]
+        llm = MockLLM(responses, supports_native_tool_calling=True)
+        agent = ReactAgent(llm=llm, tools=[Calculator()])
+
+        result = agent.run("calculate 1+1")
+
+        assert "2" in result
+        assert "tools" in llm.calls[0]["kwargs"]
+        second_messages = llm.calls[1]["messages"]
+        assert any(msg["role"] == "tool" for msg in second_messages)
+
+    def test_invalid_tool_arguments_are_blocked(self):
+        responses = [
+            {
+                "content": "",
+                "tool_calls": [
+                    {
+                        "id": "call_1",
+                        "function": {
+                            "name": "calculator",
+                            "arguments": "{}",
+                        },
+                    }
+                ],
+            },
+            {"content": "final_answer: validation failed"},
+        ]
+        llm = MockLLM(responses, supports_native_tool_calling=True)
+        agent = ReactAgent(llm=llm, tools=[Calculator()])
+
+        result = agent.run("calculate 1+1")
+
+        assert "validation failed" in result
+        tool_messages = [m for m in agent.conversation.to_list(compatible=False) if m["role"] == "tool"]
+        assert "Tool argument validation failed" in tool_messages[0]["content"]
+
     def test_reset(self):
         llm = MockLLM([{"content": "final_answer: ok"}])
         agent = ReactAgent(llm=llm, tools=[])
@@ -87,6 +141,13 @@ class TestConversation:
         assert messages[0]["role"] == "user"
         assert messages[0]["content"] == "hello"
 
+    def test_to_list_native_tool_result(self):
+        conv = Conversation()
+        conv.add_tool_result("calculator", "1+1 = 2", tool_call_id="call_1")
+        messages = conv.to_list(compatible=False)
+        assert messages[0]["role"] == "tool"
+        assert messages[0]["tool_call_id"] == "call_1"
+
     def test_clear(self):
         conv = Conversation()
         conv.add_user("hello")
@@ -106,6 +167,21 @@ class TestMessage:
         assert data["role"] == "user"
         assert "calc" in data["content"]
         assert "result" in data["content"]
+
+    def test_assistant_message_with_tool_calls(self):
+        msg = Message.assistant(
+            "",
+            tool_calls=[
+                {
+                    "id": "call_1",
+                    "type": "function",
+                    "function": {"name": "calculator", "arguments": '{"expression":"1+1"}'},
+                }
+            ],
+        )
+        data = msg.to_dict(compatible=False)
+        assert "tool_calls" in data
+        assert data["tool_calls"][0]["function"]["name"] == "calculator"
 
 
 if __name__ == "__main__":

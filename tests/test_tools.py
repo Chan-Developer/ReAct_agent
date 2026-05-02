@@ -77,6 +77,27 @@ class TestToolRegistry:
         with pytest.raises(ValueError):
             self.registry.register(calc2)
 
+    def test_validate_call_success(self):
+        calc = Calculator()
+        self.registry.register(calc)
+        ok, error = self.registry.validate_call("calculator", {"expression": "1+1"})
+        assert ok is True
+        assert error == ""
+
+    def test_validate_call_missing_required_argument(self):
+        calc = Calculator()
+        self.registry.register(calc)
+        ok, error = self.registry.validate_call("calculator", {})
+        assert ok is False
+        assert "Missing required argument" in error
+
+    def test_validate_call_invalid_argument_type(self):
+        calc = Calculator()
+        self.registry.register(calc)
+        ok, error = self.registry.validate_call("calculator", {"expression": 123})
+        assert ok is False
+        assert "Invalid argument type" in error
+
 
 class TestTavilySearch:
     """Tavily 搜索工具测试"""
