@@ -1,0 +1,89 @@
+# V2 architecture example config
+
+llm:
+  provider: modelscope
+  temperature: 0.3
+  max_tokens: 2048
+  timeout: 120
+  modelscope:
+    api_key: ""
+    base_url: "https://api-inference.modelscope.cn/v1"
+    model: "Qwen/Qwen3-32B"
+  vllm:
+    base_url: "http://localhost:8000/v1"
+    model: "Qwen3-8B"
+
+gateway:
+  host: "0.0.0.0"
+  port: 8080
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://127.0.0.1:3000"
+
+runtime:
+  default_harness: "react"
+  max_concurrent_runs: 32
+  checkpoint_enabled: true
+  checkpoint_store: "postgres"
+
+tracing:
+  enabled: true
+  exporter: "postgres"
+  sample_rate: 1.0
+  save_prompt_preview: true
+
+reflection:
+  enabled: true
+  quality_threshold: 0.65
+  hallucination_threshold: 0.35
+  retry_on_bad_score: true
+  max_retry_rounds: 1
+
+redis:
+  host: "localhost"
+  port: 6379
+  db: 0
+  password: ""
+  ttl_seconds: 86400
+
+milvus:
+  host: "localhost"
+  port: 19530
+  alias: "default"
+  collection_name: "agent_long_term_memory"
+  top_k: 5
+  similarity_threshold: 0.75
+
+memory:
+  enabled: true
+  short_term_window_size: 12
+  summary_trigger_tokens: 6000
+  summary_max_tokens: 600
+  long_term_threshold: 0.7
+  cross_session_recall: true
+  max_context_items: 6
+
+etl:
+  enabled: true
+  input_formats:
+    - "pdf"
+    - "txt"
+    - "md"
+  chunk_strategy: "semantic_chunk"
+  chunk_size: 800
+  chunk_overlap: 100
+  semantic_chunk_min_size: 300
+
+worker:
+  enabled: true
+  queue_backend: "redis"
+  concurrency: 8
+  max_retries: 2
+
+storage:
+  session_store: "postgres"
+  trace_store: "postgres"
+  artifact_store: "local"
+
+logging:
+  level: "INFO"

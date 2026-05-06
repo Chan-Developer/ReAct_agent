@@ -30,7 +30,7 @@ wheels/
 *.env
 secrets/
 configs/config.yaml
-!configs/example.yaml
+!configs/examples/*.yaml
 
 # =============================================================================
 # 虚拟环境

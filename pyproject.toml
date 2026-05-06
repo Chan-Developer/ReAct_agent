@@ -40,7 +40,7 @@ all = [
 ]
 
 [project.scripts]
-react-agent = "main:main"
+react-agent = "core.cli:main"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
@@ -48,7 +48,19 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["core*", "llm*", "tools*", "common*", "prompts*"]
+include = [
+    "agents*",
+    "common*",
+    "core*",
+    "embeddings*",
+    "knowledge*",
+    "llm*",
+    "memory*",
+    "prompts*",
+    "storage*",
+    "tools*",
+    "workflows*",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
