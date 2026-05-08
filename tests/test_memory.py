@@ -653,6 +653,82 @@ class TestMemoryManager:
         assert stats["short_term_count"] == 10
         assert stats["long_term_count"] == 5
 
+    @patch("memory.manager.ShortTermMemory")
+    @patch("memory.manager.LongTermMemory")
+    def test_from_config_uses_v2_memory_fields(
+        self,
+        mock_lt_cls,
+        mock_st_cls,
+        mock_short_term,
+        mock_long_term,
+    ):
+        from common.config import Config
+        from memory.manager import MemoryManager
+
+        mock_st_cls.return_value = mock_short_term
+        mock_lt_cls.return_value = mock_long_term
+
+        cfg = Config()
+        cfg.redis.host = "redis-host"
+        cfg.redis.port = 6380
+        cfg.redis.db = 3
+        cfg.redis.password = "secret"
+        cfg.redis.ttl_seconds = 7200
+        cfg.milvus.host = "milvus-host"
+        cfg.milvus.port = 19531
+        cfg.milvus.alias = "analytics"
+        cfg.milvus.collection_name = "memory_v2"
+        cfg.milvus.similarity_threshold = 0.81
+        cfg.memory.long_term_threshold = 0.77
+        cfg.memory.short_term_window_size = 20
+        cfg.memory.cross_session_recall = True
+
+        manager = MemoryManager.from_config(config=cfg)
+
+        mock_st_cls.assert_called_once_with(
+            host="redis-host",
+            port=6380,
+            db=3,
+            password="secret",
+            ttl=7200,
+            max_items=20,
+        )
+        mock_lt_cls.assert_called_once_with(
+            host="milvus-host",
+            port=19531,
+            alias="analytics",
+            embedding=None,
+            collection_name="memory_v2",
+            importance_threshold=0.77,
+            similarity_threshold=0.81,
+        )
+        assert manager.cross_session_recall is True
+
+    @patch("memory.manager.ShortTermMemory")
+    @patch("memory.manager.LongTermMemory")
+    def test_search_can_disable_cross_session_recall(
+        self,
+        mock_lt_cls,
+        mock_st_cls,
+        mock_short_term,
+        mock_long_term,
+    ):
+        from memory.manager import MemoryManager
+
+        mock_st_cls.return_value = mock_short_term
+        mock_lt_cls.return_value = mock_long_term
+
+        manager = MemoryManager(
+            embedding=MagicMock(),
+            cross_session_recall=False,
+            session_id="session_x",
+        )
+        manager.search("test")
+
+        mock_long_term.search.assert_called_once()
+        kwargs = mock_long_term.search.call_args.kwargs
+        assert kwargs["session_id"] == "session_x"
+
 
 # =============================================================================
 # 集成测试 (需要真实 Redis)

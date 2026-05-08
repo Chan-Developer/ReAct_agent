@@ -1,17 +1,17 @@
 [project]
-name = "react-agent"
+name = "resume-copilot"
 version = "0.1.0"
-description = "ReAct 风格智能代理框架"
+description = "AI resume copilot for diagnosis, JD matching, content optimization, and layout generation"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = { text = "MIT" }
 authors = [
-    {name = "Your Name", email = "your@email.com"}
+    { name = "Your Name", email = "your@email.com" }
 ]
-keywords = ["agent", "llm", "react", "ai"]
+keywords = ["resume", "copilot", "career", "llm", "ai"]
 classifiers = [
     "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -36,11 +36,12 @@ docs = [
     "python-docx>=1.1.0",
 ]
 all = [
-    "react-agent[dev,docs]",
+    "resume-copilot[dev,docs]",
 ]
 
 [project.scripts]
-react-agent = "core.cli:main"
+resume-copilot = "resume_copilot.interfaces.cli:main"
+react-agent = "resume_copilot.interfaces.cli:main"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
@@ -57,6 +58,7 @@ include = [
     "llm*",
     "memory*",
     "prompts*",
+    "resume_copilot*",
     "storage*",
     "tools*",
     "workflows*",
@@ -77,15 +79,15 @@ include = '\.pyi?$'
 line-length = 88
 target-version = "py310"
 select = [
-    "E",   # pycodestyle errors
-    "W",   # pycodestyle warnings
-    "F",   # pyflakes
-    "I",   # isort
-    "B",   # flake8-bugbear
-    "C4",  # flake8-comprehensions
+    "E",
+    "W",
+    "F",
+    "I",
+    "B",
+    "C4",
 ]
 ignore = [
-    "E501",  # line too long (handled by black)
+    "E501",
 ]
 
 [tool.mypy]
@@ -93,4 +95,3 @@ python_version = "3.10"
 warn_return_any = true
 warn_unused_ignores = true
 disallow_untyped_defs = true
-

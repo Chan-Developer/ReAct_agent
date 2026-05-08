@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""Backward-compatible CLI wrapper."""
+"""Resume Copilot entrypoint."""
 
-from core.cli import main
+from resume_copilot.interfaces.cli import main
 
 
 if __name__ == "__main__":

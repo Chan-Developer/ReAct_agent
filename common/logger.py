@@ -27,11 +27,18 @@ def setup_logging(level: Optional[str] = None) -> None:
         log_level = level or _DEFAULT_LEVEL
         log_format = _DEFAULT_FORMAT
     
-    logging.basicConfig(
-        level=getattr(logging, log_level.upper(), logging.INFO),
-        format=log_format,
-        handlers=[logging.StreamHandler(sys.stdout)],
-    )
+    try:
+        logging.basicConfig(
+            level=getattr(logging, log_level.upper(), logging.INFO),
+            format=log_format,
+            handlers=[logging.StreamHandler(sys.stdout)],
+        )
+    except ValueError:
+        logging.basicConfig(
+            level=getattr(logging, log_level.upper(), logging.INFO),
+            format=_DEFAULT_FORMAT,
+            handlers=[logging.StreamHandler(sys.stdout)],
+        )
     _initialized = True
 
 

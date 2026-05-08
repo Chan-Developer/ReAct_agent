@@ -138,34 +138,34 @@ class LayoutAgent(BaseLLMAgent):
         return {
             "section_order": section_order,
             "style": "modern",
-            "color_scheme": "professional",
+            "color_scheme": "executive",
             "font_config": {
                 "family": "Microsoft YaHei",
-                "title_size": 16,          # 紧凑：姓名标题
-                "heading_size": 10,         # 紧凑：章节标题
-                "subheading_size": 9,       # 子标题（公司/项目名）
+                "title_size": 20,          # 更有存在感的姓名标题
+                "heading_size": 11,
+                "subheading_size": 10,
                 "body_size": 9,             # 正文
-                "small_size": 8,            # 小字（时间等）
+                "small_size": 8,
             },
             "spacing_config": {
-                "margin": 0.4,              # 紧凑：页边距
-                "section_gap": 4,           # 紧凑：章节间距
-                "item_gap": 1,              # 紧凑：条目间距
-                "line_height": 1.0,
+                "margin": 0.45,
+                "section_gap": 6,
+                "item_gap": 2,
+                "line_height": 1.08,
             },
             "visual_elements": {
-                "use_icons": True,
+                "use_icons": False,
                 "use_skill_bars": True,
                 "use_timeline": False,
                 "highlight_keywords": True,
             },
             "content_limits": {
-                "compact_mode": True,       # 启用紧凑模式
+                "compact_mode": True,
                 "max_experiences": 3,
                 "max_projects": 2,
                 "max_highlights_per_item": 3,
             },
-            "design_notes": "一页紧凑专业风格配置"
+            "design_notes": "Executive editorial layout with stronger hierarchy and cleaner spacing."
         }
     
     def _trim_content(

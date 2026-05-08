@@ -1,0 +1,119 @@
+{
+  "cases": [
+    {
+      "case_id": "us_backend_mid",
+      "market": "us",
+      "target_role": "Senior Backend Engineer",
+      "resume_data": {
+        "name": "Alex Chen",
+        "email": "alex@example.com",
+        "summary": "Backend engineer with Python API experience and cloud deployment background.",
+        "experience": [
+          {
+            "company": "DataLoop",
+            "position": "Backend Engineer",
+            "description": "Worked on API services for analytics tools.",
+            "highlights": [
+              "Built Python APIs for internal analytics workflows",
+              "Improved deployment reliability and reduced release rollback incidents by 35%",
+              "Partnered with product managers to ship data features for enterprise customers"
+            ]
+          }
+        ],
+        "projects": [
+          {
+            "name": "Telemetry Platform",
+            "role": "Owner",
+            "description": "Internal observability project.",
+            "highlights": [
+              "Designed service instrumentation pipeline for 20+ internal services"
+            ],
+            "tech_stack": ["Python", "Redis", "PostgreSQL", "AWS"]
+          }
+        ],
+        "skills": ["Python", "API Design", "Redis", "PostgreSQL", "AWS", "Docker"]
+      },
+      "job_description": "Looking for a senior backend engineer with Python, distributed systems, API design, reliability ownership, AWS, and stakeholder communication experience.",
+      "target_thresholds": {
+        "jd_match_score": 35,
+        "quantified_evidence_score": 25,
+        "readability_score": 45,
+        "ats_safety_score": 70,
+        "overall_score": 45
+      }
+    },
+    {
+      "case_id": "uk_product_ops",
+      "market": "uk",
+      "target_role": "Product Operations Manager",
+      "resume_data": {
+        "name": "Mia Wang",
+        "email": "mia@example.com",
+        "summary": "Operations professional supporting product launches and cross-functional delivery.",
+        "experience": [
+          {
+            "company": "ScaleHub",
+            "position": "Operations Specialist",
+            "description": "Supported product and go-to-market initiatives.",
+            "highlights": [
+              "Coordinated launch readiness across product, support, and sales teams",
+              "Reduced onboarding issue resolution time from 3 days to 1 day",
+              "Created KPI reporting cadence for weekly leadership reviews"
+            ]
+          }
+        ],
+        "skills": ["Operations", "KPI Reporting", "Stakeholder Communication", "SQL", "Notion"]
+      },
+      "job_description": "Hiring a product operations manager to drive launch operations, stakeholder alignment, KPI reporting, SQL-based analysis, and cross-functional process improvement.",
+      "target_thresholds": {
+        "jd_match_score": 30,
+        "quantified_evidence_score": 20,
+        "readability_score": 45,
+        "ats_safety_score": 70,
+        "overall_score": 42
+      }
+    },
+    {
+      "case_id": "remote_ml_engineer",
+      "market": "remote",
+      "target_role": "Machine Learning Engineer",
+      "resume_data": {
+        "name": "Leo Zhang",
+        "email": "leo@example.com",
+        "summary": "Machine learning engineer focused on model deployment and data pipelines.",
+        "experience": [
+          {
+            "company": "VisionStack",
+            "position": "ML Engineer",
+            "description": "Developed model services for production use.",
+            "highlights": [
+              "Built model inference service with Python and FastAPI",
+              "Improved GPU batch throughput by 22%",
+              "Documented deployment runbooks for distributed remote teams"
+            ]
+          }
+        ],
+        "projects": [
+          {
+            "name": "Feature Store Rollout",
+            "role": "Technical Lead",
+            "description": "Feature platform modernization.",
+            "highlights": [
+              "Designed reusable feature pipelines used by 4 ML teams"
+            ],
+            "tech_stack": ["Python", "FastAPI", "Docker", "Kubernetes", "PyTorch"]
+          }
+        ],
+        "skills": ["Python", "FastAPI", "PyTorch", "Docker", "Kubernetes", "MLOps"]
+      },
+      "job_description": "Seeking a remote machine learning engineer with Python, model deployment, MLOps, Kubernetes, documentation quality, and cross-timezone collaboration skills.",
+      "target_thresholds": {
+        "jd_match_score": 35,
+        "quantified_evidence_score": 25,
+        "readability_score": 45,
+        "ats_safety_score": 70,
+        "overall_score": 45
+      }
+    }
+  ]
+}

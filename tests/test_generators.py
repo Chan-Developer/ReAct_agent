@@ -21,6 +21,7 @@ class TestResumeGenerator:
         assert "❌" in result
     
     def test_generate_docx(self):
+        pytest.importorskip("docx")
         data = {
             "name": "测试用户",
             "email": "test@test.com",

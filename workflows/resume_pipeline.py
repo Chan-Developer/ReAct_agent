@@ -14,6 +14,7 @@ from typing import Any, Dict, Optional
 
 from .base import BaseWorkflow, WorkflowResult, WorkflowContext
 from common.logger import get_logger
+from resume_copilot.product import curate_resume
 
 logger = get_logger(__name__)
 
@@ -89,6 +90,11 @@ class ResumePipeline(BaseWorkflow):
         """执行完整流水线"""
         suggestions = []
         data = ctx.input_data.copy()
+
+        data, curation_notes = curate_resume(data, ctx.job_description or "")
+        suggestions.extend(curation_notes)
+        if curation_notes:
+            self._log("已完成岗位导向的项目筛选与奖项排序")
         
         # =====================================================================
         # Step 1: 内容优化（ContentAgent 专家）

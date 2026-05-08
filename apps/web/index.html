@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resume Copilot</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="site-shell">
+    <header class="topbar">
+      <a class="brand" href="#hero">
+        <span class="brand-mark">RC</span>
+        <span class="brand-copy">
+          <strong>Resume Copilot</strong>
+          <span data-i18n="brandTag">Global resume intelligence</span>
+        </span>
+      </a>
+
+      <nav class="topnav">
+        <a href="#product" data-i18n="navProduct">Product</a>
+        <a href="#workflow" data-i18n="navWorkflow">Workflow</a>
+        <a href="#studio" data-i18n="navStudio">Studio</a>
+        <a href="#regions" data-i18n="navRegions">Regions</a>
+      </nav>
+
+      <div class="topbar-actions">
+        <label class="language-switch">
+          <span data-i18n="languageLabel">Language</span>
+          <select id="languageSelect" aria-label="language">
+            <option value="en">English</option>
+            <option value="zh-CN">简体中文</option>
+          </select>
+        </label>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero" id="hero">
+        <div class="hero-copy">
+          <p class="eyebrow" data-i18n="heroEyebrow">AI resume operating system</p>
+          <h1 data-i18n="heroTitle">Turn raw experience into globally competitive resumes.</h1>
+          <p class="hero-text" data-i18n="heroBody">
+            Resume Copilot diagnoses positioning gaps, adapts to target job descriptions, rewrites content, and prepares polished outputs for different hiring markets.
+          </p>
+
+          <div class="hero-actions">
+            <a class="button button-primary" href="#studio" data-i18n="heroPrimary">Open Product Studio</a>
+            <a class="button button-secondary" href="#workflow" data-i18n="heroSecondary">See the workflow</a>
+          </div>
+
+          <ul class="hero-points">
+            <li data-i18n="heroPoint1">Built for ATS-readiness, recruiter clarity, and international role targeting</li>
+            <li data-i18n="heroPoint2">Supports JD matching, content optimization, layout tuning, and memory-driven personalization</li>
+            <li data-i18n="heroPoint3">Designed for English-first and bilingual job seekers across US, UK, EU, APAC, and remote markets</li>
+          </ul>
+        </div>
+
+        <div class="hero-panel">
+          <div class="signal-card">
+            <p class="signal-label" data-i18n="heroPanelLabel">Product signals</p>
+            <div class="signal-grid">
+              <article>
+                <strong>92%</strong>
+                <span data-i18n="signal1">JD alignment target</span>
+              </article>
+              <article>
+                <strong>3</strong>
+                <span data-i18n="signal2">Output layers</span>
+              </article>
+              <article>
+                <strong>5</strong>
+                <span data-i18n="signal3">Hiring markets</span>
+              </article>
+              <article>
+                <strong>∞</strong>
+                <span data-i18n="signal4">Preference memory</span>
+              </article>
+            </div>
+          </div>
+
+          <div class="preview-card">
+            <p class="preview-label" data-i18n="previewLabel">What the product returns</p>
+            <ol>
+              <li data-i18n="preview1">Positioning diagnosis with role-fit risks</li>
+              <li data-i18n="preview2">Keyword match summary against the JD</li>
+              <li data-i18n="preview3">Optimized resume draft with stronger bullets</li>
+              <li data-i18n="preview4">Layout recommendation for one-page or two-page delivery</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="product">
+        <div class="section-heading">
+          <p class="eyebrow" data-i18n="productEyebrow">Product shape</p>
+          <h2 data-i18n="productTitle">A vertical AI product, not a general framework.</h2>
+          <p data-i18n="productBody">
+            The experience is now organized around resume outcomes: diagnose, tailor, optimize, format, and export.
+          </p>
+        </div>
+
+        <div class="feature-grid">
+          <article class="feature-card">
+            <span class="feature-kicker" data-i18n="feature1Kicker">Diagnosis</span>
+            <h3 data-i18n="feature1Title">Resume health audit</h3>
+            <p data-i18n="feature1Body">Find weak summaries, vague bullets, missing metrics, and under-positioned projects before recruiters do.</p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-kicker" data-i18n="feature2Kicker">Tailoring</span>
+            <h3 data-i18n="feature2Title">JD-aware adaptation</h3>
+            <p data-i18n="feature2Body">Map your experience to role requirements, surface missing keywords, and prioritize the most relevant evidence.</p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-kicker" data-i18n="feature3Kicker">Optimization</span>
+            <h3 data-i18n="feature3Title">Content rewriting</h3>
+            <p data-i18n="feature3Body">Rewrite bullets for clarity, impact, and recruiter readability without flattening your real story.</p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-kicker" data-i18n="feature4Kicker">Delivery</span>
+            <h3 data-i18n="feature4Title">Layout and export</h3>
+            <p data-i18n="feature4Body">Choose templates, optimize pagination, and prepare polished outputs for direct submission.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section workflow" id="workflow">
+        <div class="section-heading">
+          <p class="eyebrow" data-i18n="workflowEyebrow">Workflow</p>
+          <h2 data-i18n="workflowTitle">A hiring-facing workflow with product logic baked in.</h2>
+        </div>
+
+        <div class="workflow-rail">
+          <article class="workflow-step">
+            <span>01</span>
+            <h3 data-i18n="step1Title">Diagnose</h3>
+            <p data-i18n="step1Body">Audit summary, experience, projects, skills, and evidence density.</p>
+          </article>
+          <article class="workflow-step">
+            <span>02</span>
+            <h3 data-i18n="step2Title">Tailor</h3>
+            <p data-i18n="step2Body">Compare the resume against a target JD and reshape emphasis for the target role.</p>
+          </article>
+          <article class="workflow-step">
+            <span>03</span>
+            <h3 data-i18n="step3Title">Strengthen</h3>
+            <p data-i18n="step3Body">Rewrite bullets, add metrics, and tighten phrasing for stronger recruiter scan value.</p>
+          </article>
+          <article class="workflow-step">
+            <span>04</span>
+            <h3 data-i18n="step4Title">Format</h3>
+            <p data-i18n="step4Body">Apply market-appropriate layout, typography, and page-length strategy.</p>
+          </article>
+          <article class="workflow-step">
+            <span>05</span>
+            <h3 data-i18n="step5Title">Remember</h3>
+            <p data-i18n="step5Body">Store user preferences and successful patterns for future applications.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section studio" id="studio">
+        <div class="section-heading">
+          <p class="eyebrow" data-i18n="studioEyebrow">Product studio</p>
+          <h2 data-i18n="studioTitle">Prototype the end-user experience.</h2>
+          <p data-i18n="studioBody">
+            This studio models how Resume Copilot can frame recommendations for different hiring markets and user intents.
+          </p>
+        </div>
+
+        <div class="studio-layout">
+          <form class="studio-form" id="resumeStudioForm">
+            <div class="field-row">
+              <label>
+                <span data-i18n="fieldMarket">Target market</span>
+                <select id="marketSelect">
+                  <option value="us">United States</option>
+                  <option value="uk">United Kingdom</option>
+                  <option value="eu">European Union</option>
+                  <option value="apac">APAC</option>
+                  <option value="remote">Remote-first</option>
+                </select>
+              </label>
+              <label>
+                <span data-i18n="fieldTone">Voice preference</span>
+                <select id="toneSelect">
+                  <option value="precise">Precise and concise</option>
+                  <option value="confident">Confident and executive</option>
+                  <option value="technical">Technical and evidence-led</option>
+                </select>
+              </label>
+            </div>
+
+            <label>
+              <span data-i18n="fieldRole">Target role</span>
+              <input id="roleInput" type="text" value="Senior Backend Engineer" />
+            </label>
+
+            <label>
+              <span data-i18n="fieldResume">Resume snapshot</span>
+              <textarea id="resumeInput" rows="8">Built Python services for internal analytics, maintained APIs, improved deployment reliability, and worked with product teams.</textarea>
+            </label>
+
+            <label>
+              <span data-i18n="fieldJd">Job description excerpt</span>
+              <textarea id="jdInput" rows="8">Looking for a backend engineer who can design distributed systems, improve reliability, communicate with stakeholders, and mentor teammates.</textarea>
+            </label>
+
+            <button class="button button-primary full-width" type="submit" data-i18n="runPreview">Generate product preview</button>
+          </form>
+
+          <aside class="studio-output" id="studioOutput" aria-live="polite">
+            <div class="output-card">
+              <p class="output-kicker" data-i18n="outputKicker">Preview</p>
+              <h3 data-i18n="outputTitle">Your recommendations will appear here.</h3>
+              <p data-i18n="outputBody">Use the studio to simulate diagnosis, market positioning, and memory-backed preference guidance.</p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section regions" id="regions">
+        <div class="section-heading">
+          <p class="eyebrow" data-i18n="regionsEyebrow">International view</p>
+          <h2 data-i18n="regionsTitle">Designed with global hiring norms in mind.</h2>
+        </div>
+
+        <div class="region-grid">
+          <article>
+            <h3>US / Canada</h3>
+            <p data-i18n="regionUs">Focus on quantified impact, ownership, systems scale, and concise one-page or tight two-page delivery.</p>
+          </article>
+          <article>
+            <h3>UK / EU</h3>
+            <p data-i18n="regionUk">Balance achievements with role scope, team context, and clarity across multinational recruiting processes.</p>
+          </article>
+          <article>
+            <h3>APAC</h3>
+            <p data-i18n="regionApac">Support bilingual nuance, stronger structure, and market-specific emphasis on education, projects, and stability signals.</p>
+          </article>
+          <article>
+            <h3>Remote</h3>
+            <p data-i18n="regionRemote">Highlight async communication, documentation quality, timezone collaboration, and cross-functional execution.</p>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

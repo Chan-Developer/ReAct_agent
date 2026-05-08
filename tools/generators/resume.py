@@ -63,6 +63,8 @@ class Project:
     description: str = ""
     highlights: List[str] = field(default_factory=list)
     tech_stack: List[str] = field(default_factory=list)  # 新增：技术栈
+    target_fit_summary: str = ""
+    relevance_score: float = 0.0
 
 
 @dataclass
@@ -97,6 +99,8 @@ class ResumeData:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ResumeData":
         """从字典创建 ResumeData 实例"""
+        from resume_copilot.product import sort_awards_by_importance
+
         # 解析教育经历
         education_list = []
         for edu in data.get("education", []):
@@ -136,6 +140,8 @@ class ResumeData:
                     description=proj.get("description", ""),
                     highlights=proj.get("highlights", []),
                     tech_stack=proj.get("tech_stack", []),
+                    target_fit_summary=proj.get("target_fit_summary", ""),
+                    relevance_score=float(proj.get("relevance_score", 0.0) or 0.0),
                 ))
         
         # 解析 skills 列表（兼容字符串和 dict 格式）
@@ -163,7 +169,7 @@ class ResumeData:
             projects=project_list,
             skills=skills_list,
             certificates=data.get("certificates", []),
-            awards=data.get("awards", []),
+            awards=sort_awards_by_importance(data.get("awards", [])),
             languages=data.get("languages", []),
             interests=data.get("interests", []),
         )
@@ -199,32 +205,34 @@ class ResumeData:
 
 @dataclass
 class ColorScheme:
-    """颜色方案 - 统一黑色字体"""
-    primary: str = "#000000"    # 主色调（标题）- 黑色
-    secondary: str = "#000000"  # 次要色（时间等）- 黑色
-    accent: str = "#000000"     # 强调色（分隔线等）- 黑色
-    text: str = "#000000"       # 正文颜色 - 黑色
-    light: str = "#f5f5f5"      # 浅色背景
-    success: str = "#000000"    # 成功色（技能条）- 黑色
+    """颜色方案 - 更适合高端求职简历"""
+    primary: str = "#102A43"
+    secondary: str = "#486581"
+    accent: str = "#0F766E"
+    text: str = "#1F2933"
+    light: str = "#E6FFFA"
+    success: str = "#0F766E"
+    border: str = "#D9E2EC"
+    muted: str = "#7B8794"
 
 
 @dataclass
 class FontConfig:
-    """字体配置 - 紧凑版（适合一页简历）"""
-    title_size: int = 16        # 姓名标题（缩小）
-    heading_size: int = 10      # 章节标题（缩小）
-    subheading_size: int = 9    # 子标题（公司/项目名）
+    """字体配置 - 编辑感更强的求职排版"""
+    title_size: int = 20
+    heading_size: int = 11
+    subheading_size: int = 10
     body_size: int = 9          # 正文
     small_size: int = 8         # 小字（时间等）
 
 
 @dataclass
 class SpacingConfig:
-    """间距配置（单位: Pt）- 极紧凑版（适合一页简历）"""
-    margin: float = 0.4         # 页边距（inch）- 更窄
-    section_gap: int = 4        # 章节间距（Pt）- 更紧凑
-    item_gap: int = 1           # 条目间距（Pt）- 更紧凑
-    line_height: float = 1.0    # 行高
+    """间距配置（单位: Pt）"""
+    margin: float = 0.45
+    section_gap: int = 6
+    item_gap: int = 2
+    line_height: float = 1.08
 
 
 @dataclass
@@ -324,26 +332,45 @@ class DocxGenerator(BaseDocumentGenerator):
             int(hex_color[4:6], 16),
         )
 
+    def _apply_run_style(
+        self,
+        run,
+        *,
+        size: int,
+        color: str,
+        bold: bool = False,
+        italic: bool = False,
+        font_name: str = "Aptos",
+        east_asia_font: str = "微软雅黑",
+    ) -> None:
+        from docx.shared import Pt
+        from docx.oxml.ns import qn
+
+        run.bold = bold
+        run.italic = italic
+        run.font.size = Pt(size)
+        run.font.color.rgb = self._hex_to_rgb(color)
+        run.font.name = font_name
+        run._element.rPr.rFonts.set(qn("w:eastAsia"), east_asia_font)
+
     def _add_header(self, doc, data: ResumeData) -> None:
-        """添加页眉（姓名和联系方式）- 紧凑版"""
+        """添加页眉（更具品牌感的顶部信息区）"""
         from docx.shared import Pt
         from docx.enum.text import WD_ALIGN_PARAGRAPH
-        from docx.oxml.ns import qn
         
-        # 姓名
         title = doc.add_paragraph()
         title.alignment = WD_ALIGN_PARAGRAPH.CENTER
         title.paragraph_format.space_before = Pt(0)
-        title.paragraph_format.space_after = Pt(2)
+        title.paragraph_format.space_after = Pt(3)
         
         run = title.add_run(data.name or "姓名")
-        run.bold = True
-        run.font.size = Pt(self.style.fonts.title_size)
-        run.font.color.rgb = self._hex_to_rgb(self.style.colors.primary)
-        run.font.name = 'Microsoft YaHei'
-        run._element.rPr.rFonts.set(qn('w:eastAsia'), '微软雅黑')
+        self._apply_run_style(
+            run,
+            size=self.style.fonts.title_size,
+            color=self.style.colors.primary,
+            bold=True,
+        )
         
-        # 联系信息（紧凑一行）
         contact_parts = []
         if data.phone:
             contact_parts.append(data.phone)
@@ -356,24 +383,28 @@ class DocxGenerator(BaseDocumentGenerator):
             contact = doc.add_paragraph()
             contact.alignment = WD_ALIGN_PARAGRAPH.CENTER
             contact.paragraph_format.space_before = Pt(0)
-            contact.paragraph_format.space_after = Pt(1)
+            contact.paragraph_format.space_after = Pt(1.5)
             
             run = contact.add_run(" | ".join(contact_parts))
-            run.font.size = Pt(self.style.fonts.small_size)
-            run.font.color.rgb = self._hex_to_rgb(self.style.colors.text)
+            self._apply_run_style(
+                run,
+                size=self.style.fonts.small_size,
+                color=self.style.colors.secondary,
+            )
         
-        # 社交链接（紧凑一行）
         if data.social_links:
             social = doc.add_paragraph()
             social.alignment = WD_ALIGN_PARAGRAPH.CENTER
             social.paragraph_format.space_before = Pt(0)
-            social.paragraph_format.space_after = Pt(2)
+            social.paragraph_format.space_after = Pt(2.5)
             
             run = social.add_run(" | ".join(data.social_links))
-            run.font.size = Pt(self.style.fonts.small_size)
-            run.font.color.rgb = self._hex_to_rgb(self.style.colors.accent)
+            self._apply_run_style(
+                run,
+                size=self.style.fonts.small_size,
+                color=self.style.colors.accent,
+            )
         
-        # 分隔线
         self._add_horizontal_line(doc)
 
     def _add_horizontal_line(self, doc) -> None:
@@ -384,41 +415,48 @@ class DocxGenerator(BaseDocumentGenerator):
         
         p = doc.add_paragraph()
         p.paragraph_format.space_before = Pt(0)
-        p.paragraph_format.space_after = Pt(4)
+        p.paragraph_format.space_after = Pt(6)
         
         pPr = p._p.get_or_add_pPr()
         pBdr = OxmlElement('w:pBdr')
         bottom = OxmlElement('w:bottom')
         bottom.set(qn('w:val'), 'single')
-        bottom.set(qn('w:sz'), '8')
-        bottom.set(qn('w:color'), self.style.colors.primary.lstrip('#'))
+        bottom.set(qn('w:sz'), '10')
+        bottom.set(qn('w:color'), self.style.colors.accent.lstrip('#'))
         pBdr.append(bottom)
         pPr.append(pBdr)
 
     def _add_section_heading(self, doc, title: str) -> None:
-        """添加章节标题 - 紧凑专业版"""
+        """添加章节标题 - 更有高级感的编辑式层级"""
         from docx.shared import Pt
-        from docx.oxml.ns import qn
         from docx.oxml import OxmlElement
+        from docx.oxml.ns import qn
         
         p = doc.add_paragraph()
         p.paragraph_format.space_before = Pt(self.style.spacing.section_gap)
-        p.paragraph_format.space_after = Pt(2)
+        p.paragraph_format.space_after = Pt(3)
         
-        run = p.add_run(title)
-        run.bold = True
-        run.font.size = Pt(self.style.fonts.heading_size)
-        run.font.color.rgb = self._hex_to_rgb(self.style.colors.primary)
-        run.font.name = 'Microsoft YaHei'
-        run._element.rPr.rFonts.set(qn('w:eastAsia'), '微软雅黑')
+        marker = p.add_run("▌ ")
+        self._apply_run_style(
+            marker,
+            size=self.style.fonts.heading_size,
+            color=self.style.colors.accent,
+            bold=True,
+        )
+        run = p.add_run(title.upper())
+        self._apply_run_style(
+            run,
+            size=self.style.fonts.heading_size,
+            color=self.style.colors.primary,
+            bold=True,
+        )
         
-        # 细下划线
         pPr = p._p.get_or_add_pPr()
         pBdr = OxmlElement('w:pBdr')
         bottom = OxmlElement('w:bottom')
         bottom.set(qn('w:val'), 'single')
-        bottom.set(qn('w:sz'), '4')
-        bottom.set(qn('w:color'), self.style.colors.accent.lstrip('#'))
+        bottom.set(qn('w:sz'), '3')
+        bottom.set(qn('w:color'), self.style.colors.border.lstrip('#'))
         pBdr.append(bottom)
         pPr.append(pBdr)
 
@@ -434,12 +472,16 @@ class DocxGenerator(BaseDocumentGenerator):
         
         p = doc.add_paragraph()
         p.paragraph_format.space_before = Pt(0)
-        p.paragraph_format.space_after = Pt(0)
+        p.paragraph_format.space_after = Pt(1)
+        p.paragraph_format.line_spacing = self.style.spacing.line_height
         p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         
         run = p.add_run(data.summary)
-        run.font.size = Pt(self.style.fonts.body_size)
-        run.font.color.rgb = self._hex_to_rgb(self.style.colors.text)
+        self._apply_run_style(
+            run,
+            size=self.style.fonts.body_size,
+            color=self.style.colors.text,
+        )
 
     def _add_education(self, doc, data: ResumeData) -> None:
         """添加教育背景 - 紧凑版"""
@@ -543,7 +585,7 @@ class DocxGenerator(BaseDocumentGenerator):
                 run.font.color.rgb = self._hex_to_rgb(self.style.colors.text)
 
     def _add_projects(self, doc, data: ResumeData) -> None:
-        """添加项目经验 - 紧凑版"""
+        """添加项目经验 - 以岗位相关性优先呈现"""
         if not data.projects:
             return
             
@@ -556,64 +598,104 @@ class DocxGenerator(BaseDocumentGenerator):
             p.paragraph_format.space_before = Pt(0)
             p.paragraph_format.space_after = Pt(1)
             
-            # 项目名称（深色加粗）
             run = p.add_run(proj.name)
-            run.bold = True
-            run.font.size = Pt(self.style.fonts.subheading_size)
-            run.font.color.rgb = self._hex_to_rgb(self.style.colors.primary)
+            self._apply_run_style(
+                run,
+                size=self.style.fonts.subheading_size,
+                color=self.style.colors.primary,
+                bold=True,
+            )
             
-            # 角色（强调色）
             if proj.role:
                 run = p.add_run(f" | {proj.role}")
-                run.font.size = Pt(self.style.fonts.body_size)
-                run.font.color.rgb = self._hex_to_rgb(self.style.colors.accent)
+                self._apply_run_style(
+                    run,
+                    size=self.style.fonts.body_size,
+                    color=self.style.colors.accent,
+                )
             
-            # 时间（浅色）
             if proj.start_date or proj.end_date:
                 run = p.add_run("\t" * 4)
                 run = p.add_run(f"{proj.start_date} - {proj.end_date}")
-                run.font.size = Pt(self.style.fonts.small_size)
-                run.font.color.rgb = self._hex_to_rgb(self.style.colors.secondary)
+                self._apply_run_style(
+                    run,
+                    size=self.style.fonts.small_size,
+                    color=self.style.colors.secondary,
+                )
+
+            if proj.target_fit_summary:
+                p_fit = doc.add_paragraph()
+                p_fit.paragraph_format.left_indent = Inches(0.08)
+                p_fit.paragraph_format.space_before = Pt(0)
+                p_fit.paragraph_format.space_after = Pt(1)
+                run = p_fit.add_run("Role fit: ")
+                self._apply_run_style(
+                    run,
+                    size=self.style.fonts.small_size,
+                    color=self.style.colors.accent,
+                    bold=True,
+                )
+                run = p_fit.add_run(proj.target_fit_summary)
+                self._apply_run_style(
+                    run,
+                    size=self.style.fonts.small_size,
+                    color=self.style.colors.secondary,
+                    italic=True,
+                )
             
-            # 技术栈（紧凑一行）
             if proj.tech_stack:
                 p_tech = doc.add_paragraph()
                 p_tech.paragraph_format.left_indent = Inches(0.1)
                 p_tech.paragraph_format.space_before = Pt(0)
-                p_tech.paragraph_format.space_after = Pt(0)
+                p_tech.paragraph_format.space_after = Pt(1)
                 
                 run = p_tech.add_run("技术栈: ")
-                run.font.size = Pt(self.style.fonts.small_size)
-                run.font.color.rgb = self._hex_to_rgb(self.style.colors.secondary)
+                self._apply_run_style(
+                    run,
+                    size=self.style.fonts.small_size,
+                    color=self.style.colors.secondary,
+                    bold=True,
+                )
                 
                 run = p_tech.add_run(" | ".join(proj.tech_stack))
-                run.font.size = Pt(self.style.fonts.small_size)
-                run.font.color.rgb = self._hex_to_rgb(self.style.colors.accent)
+                self._apply_run_style(
+                    run,
+                    size=self.style.fonts.small_size,
+                    color=self.style.colors.accent,
+                )
             
-            # 项目描述
             if proj.description:
                 p2 = doc.add_paragraph()
                 p2.paragraph_format.left_indent = Inches(0.1)
                 p2.paragraph_format.space_before = Pt(0)
-                p2.paragraph_format.space_after = Pt(0)
+                p2.paragraph_format.space_after = Pt(0.5)
                 
                 run = p2.add_run(proj.description)
-                run.font.size = Pt(self.style.fonts.body_size)
-                run.font.color.rgb = self._hex_to_rgb(self.style.colors.text)
+                self._apply_run_style(
+                    run,
+                    size=self.style.fonts.body_size,
+                    color=self.style.colors.text,
+                )
             
-            # 项目亮点（绿色勾）
             for highlight in proj.highlights:
                 p3 = doc.add_paragraph()
                 p3.paragraph_format.left_indent = Inches(0.15)
                 p3.paragraph_format.space_before = Pt(0)
                 p3.paragraph_format.space_after = Pt(0)
                 
-                run = p3.add_run("✓ ")
-                run.font.size = Pt(self.style.fonts.body_size)
-                run.font.color.rgb = self._hex_to_rgb(self.style.colors.success)
+                run = p3.add_run("◆ ")
+                self._apply_run_style(
+                    run,
+                    size=self.style.fonts.body_size,
+                    color=self.style.colors.success,
+                    bold=True,
+                )
                 run = p3.add_run(highlight)
-                run.font.size = Pt(self.style.fonts.body_size)
-                run.font.color.rgb = self._hex_to_rgb(self.style.colors.text)
+                self._apply_run_style(
+                    run,
+                    size=self.style.fonts.body_size,
+                    color=self.style.colors.text,
+                )
 
     def _add_skills(self, doc, data: ResumeData) -> None:
         """添加专业技能"""
@@ -629,9 +711,20 @@ class DocxGenerator(BaseDocumentGenerator):
             p.paragraph_format.space_before = Pt(2)
             p.paragraph_format.space_after = Pt(0)
             
-            run = p.add_run(" | ".join(data.skills))
-            run.font.size = Pt(self.style.fonts.body_size)
-            run.font.color.rgb = self._hex_to_rgb(self.style.colors.text)
+            for i, skill in enumerate(data.skills):
+                if i > 0:
+                    divider = p.add_run("   ")
+                    self._apply_run_style(
+                        divider,
+                        size=self.style.fonts.body_size,
+                        color=self.style.colors.muted,
+                    )
+                run = p.add_run(f"[{skill}]")
+                self._apply_run_style(
+                    run,
+                    size=self.style.fonts.body_size,
+                    color=self.style.colors.accent,
+                )
 
     def _add_certificates(self, doc, data: ResumeData) -> None:
         """添加证书资质 - 紧凑版"""
@@ -657,27 +750,33 @@ class DocxGenerator(BaseDocumentGenerator):
             run.font.color.rgb = self._hex_to_rgb(self.style.colors.text)
 
     def _add_awards(self, doc, data: ResumeData) -> None:
-        """添加荣誉奖项 - 紧凑版"""
+        """添加荣誉奖项 - 从高价值奖项到普通奖项递减展示"""
         if not data.awards:
             return
             
-        from docx.shared import Pt
+        from docx.shared import Pt, Inches
         
         self._add_section_heading(doc, "荣誉奖项")
         
-        # 一行显示所有奖项
-        p = doc.add_paragraph()
-        p.paragraph_format.space_before = Pt(0)
-        p.paragraph_format.space_after = Pt(0)
-        
-        for i, award in enumerate(data.awards):
-            if i > 0:
-                run = p.add_run(" | ")
-                run.font.size = Pt(self.style.fonts.body_size)
-                run.font.color.rgb = self._hex_to_rgb(self.style.colors.secondary)
+        for index, award in enumerate(data.awards, start=1):
+            p = doc.add_paragraph()
+            p.paragraph_format.left_indent = Inches(0.05)
+            p.paragraph_format.space_before = Pt(0)
+            p.paragraph_format.space_after = Pt(0.5)
+
+            rank = p.add_run(f"{index}. ")
+            self._apply_run_style(
+                rank,
+                size=self.style.fonts.body_size,
+                color=self.style.colors.accent,
+                bold=True,
+            )
             run = p.add_run(award)
-            run.font.size = Pt(self.style.fonts.body_size)
-            run.font.color.rgb = self._hex_to_rgb(self.style.colors.text)
+            self._apply_run_style(
+                run,
+                size=self.style.fonts.body_size,
+                color=self.style.colors.text,
+            )
 
 
 # =============================================================================
@@ -844,6 +943,9 @@ class ResumeGenerator(BaseTool):
         
         # 2. 提取嵌入的布局配置
         layout_config = raw_data.pop("_layout_config", None)
+
+        from resume_copilot.product import curate_resume
+        raw_data, _ = curate_resume(raw_data, "")
         
         # 3. 加载模板配置（如果指定）
         template_config = self._load_template_config(template, temp_dir)
@@ -1031,6 +1133,33 @@ class ResumeGenerator(BaseTool):
                 - visual_elements: 视觉元素开关
         """
         try:
+            color_scheme = layout_config.get("color_scheme", "")
+            if color_scheme:
+                if color_scheme in {"executive", "professional"}:
+                    style.colors = ColorScheme()
+                elif color_scheme == "monochrome":
+                    style.colors = ColorScheme(
+                        primary="#111827",
+                        secondary="#4B5563",
+                        accent="#111827",
+                        text="#111827",
+                        light="#F3F4F6",
+                        success="#111827",
+                        border="#D1D5DB",
+                        muted="#6B7280",
+                    )
+                elif color_scheme == "vibrant":
+                    style.colors = ColorScheme(
+                        primary="#0B1F3A",
+                        secondary="#475569",
+                        accent="#C2410C",
+                        text="#1E293B",
+                        light="#FFF7ED",
+                        success="#0F766E",
+                        border="#E2E8F0",
+                        muted="#64748B",
+                    )
+
             # 应用字体配置
             if "font_config" in layout_config:
                 font_cfg = layout_config["font_config"]
