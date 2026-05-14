@@ -7,6 +7,8 @@ import copy
 import re
 from typing import Any
 
+from resume_copilot.domain import normalize_resume_data
+
 
 PROJECT_PRIORITY_TERMS = {
     "architecture": 6,
@@ -40,11 +42,8 @@ AWARD_PRIORITY_PATTERNS = (
 
 def curate_resume(resume_data: dict[str, Any], job_description: str = "") -> tuple[dict[str, Any], list[str]]:
     """Apply product curation before layout and export."""
-    curated = copy.deepcopy(resume_data)
+    curated = copy.deepcopy(normalize_resume_data(resume_data))
     suggestions: list[str] = []
-
-    if "experiences" in curated and "experience" not in curated:
-        curated["experience"] = curated["experiences"]
 
     if curated.get("projects"):
         curated["projects"], project_notes = rank_projects_for_job(

@@ -10,14 +10,16 @@ import sys
 from pathlib import Path
 
 from common import get_logger, set_level, setup_logging
-from llm import ModelScopeOpenAI, VllmLLM
 from resume_copilot.application.resume_product_service import ResumeProductService
+from resume_copilot.application.resume_workbench_service import ResumeWorkbenchService
 
 setup_logging()
 logger = get_logger(__name__)
 
 
 def create_llm(local: bool = False):
+    from llm import ModelScopeOpenAI, VllmLLM
+
     if local:
         logger.info("Using local vLLM")
         return VllmLLM()
@@ -109,6 +111,28 @@ def run_evaluate_mode(args) -> None:
     print(json.dumps(summary, ensure_ascii=False, indent=2))
 
 
+def run_workbench_mode(args) -> None:
+    print("\n" + "=" * 60)
+    print("Resume Copilot Workbench")
+    print("=" * 60)
+
+    try:
+        resume_text = _read_text_file(args.resume_text) if args.resume_text else ""
+        job_description = _read_text_file(args.jd)
+    except FileNotFoundError as exc:
+        print(f"Error: invalid workbench input: {exc}")
+        return
+
+    payload = ResumeWorkbenchService().build_payload(
+        resume_text=resume_text,
+        job_description=job_description,
+        role=args.role or "Target Role",
+        market=args.market or "global",
+        tone=args.tone or "precise",
+    )
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Resume Copilot CLI",
@@ -136,6 +160,19 @@ def parse_args() -> argparse.Namespace:
     evaluate.add_argument("-o", "--output_dir", default="./storage/exports", help="Output directory")
     evaluate.add_argument("-d", "--debug", action="store_true", help="Debug mode")
 
+    workbench = subparsers.add_parser("workbench", help="Run the resume workbench payload builder")
+    workbench.add_argument("--resume-text", help="Plain-text resume snapshot file path")
+    workbench.add_argument("--jd", required=True, help="Job description file path")
+    workbench.add_argument("--role", default="Target Role", help="Target role name")
+    workbench.add_argument("--market", default="global", help="Target market")
+    workbench.add_argument(
+        "--tone",
+        choices=["precise", "confident", "technical"],
+        default="precise",
+        help="Voice preference",
+    )
+    workbench.add_argument("-d", "--debug", action="store_true", help="Debug mode")
+
     return parser.parse_args()
 
 
@@ -143,7 +180,7 @@ def main() -> None:
     args = parse_args()
     if args.mode is None:
         print("Resume Copilot")
-        print("Primary commands: resume, evaluate")
+        print("Primary commands: resume, evaluate, workbench")
         print(
             'Example: python main.py resume -r @data/sample_resume.json --jd data/sample_job.txt'
         )
@@ -156,3 +193,5 @@ def main() -> None:
         run_resume_mode(args)
     elif args.mode == "evaluate":
         run_evaluate_mode(args)
+    elif args.mode == "workbench":
+        run_workbench_mode(args)

@@ -1,252 +1,514 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Resume Copilot</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>Resume Copilot | Resume Lab</title>
+  <link rel="stylesheet" href="styles.css?v=20260514-coach-panel">
 </head>
 <body>
-  <div class="site-shell">
+  <div class="ambient-particles" aria-hidden="true"></div>
+  <div class="shell">
     <header class="topbar">
-      <a class="brand" href="#hero">
-        <span class="brand-mark">RC</span>
+      <a class="brand" href="#home" data-route="home">
+        <span class="brand-mark" data-i18n="brandMark">RC</span>
         <span class="brand-copy">
-          <strong>Resume Copilot</strong>
-          <span data-i18n="brandTag">Global resume intelligence</span>
+          <strong data-i18n="brandName">Resume Copilot</strong>
+          <span data-i18n="brandTag">Personal job search intelligence</span>
         </span>
       </a>
 
-      <nav class="topnav">
-        <a href="#product" data-i18n="navProduct">Product</a>
-        <a href="#workflow" data-i18n="navWorkflow">Workflow</a>
-        <a href="#studio" data-i18n="navStudio">Studio</a>
-        <a href="#regions" data-i18n="navRegions">Regions</a>
+      <nav class="nav">
+        <a href="#home" data-route="home" data-i18n="navHome">Home</a>
+        <a href="#quest" data-route="quest" data-i18n="navStudio">Resume Lab</a>
       </nav>
 
-      <div class="topbar-actions">
-        <label class="language-switch">
-          <span data-i18n="languageLabel">Language</span>
-          <select id="languageSelect" aria-label="language">
-            <option value="en">English</option>
-            <option value="zh-CN">简体中文</option>
-          </select>
-        </label>
-      </div>
+      <label class="language-switch">
+        <span data-i18n="languageLabel">Language</span>
+        <select id="languageSelect" aria-label="language">
+          <option value="zh-CN" selected>&#31616;&#20307;&#20013;&#25991;</option>
+          <option value="en">English</option>
+        </select>
+      </label>
     </header>
 
     <main>
-      <section class="hero" id="hero">
+      <section class="hero app-page is-active" id="home" data-page="home">
         <div class="hero-copy">
-          <p class="eyebrow" data-i18n="heroEyebrow">AI resume operating system</p>
-          <h1 data-i18n="heroTitle">Turn raw experience into globally competitive resumes.</h1>
+          <p class="eyebrow" data-i18n="heroEyebrow">AI personal job search agent</p>
+          <h1 data-i18n="heroTitle">Build a resume command center, not another form stack.</h1>
           <p class="hero-text" data-i18n="heroBody">
-            Resume Copilot diagnoses positioning gaps, adapts to target job descriptions, rewrites content, and prepares polished outputs for different hiring markets.
+            Resume Copilot is evolving into a focused job-search operating system. Start with the resume, wire it to the JD, expose the gaps, and turn every rewrite into a concrete next move.
           </p>
-
           <div class="hero-actions">
-            <a class="button button-primary" href="#studio" data-i18n="heroPrimary">Open Product Studio</a>
-            <a class="button button-secondary" href="#workflow" data-i18n="heroSecondary">See the workflow</a>
+            <a class="button button-primary button-large" href="#quest" data-route="quest" data-i18n="heroPrimary">Open Resume Lab</a>
+            <a class="button button-ghost" href="#quest" data-route="quest" data-i18n="heroSecondary">Start Resume Quest</a>
           </div>
-
-          <ul class="hero-points">
-            <li data-i18n="heroPoint1">Built for ATS-readiness, recruiter clarity, and international role targeting</li>
-            <li data-i18n="heroPoint2">Supports JD matching, content optimization, layout tuning, and memory-driven personalization</li>
-            <li data-i18n="heroPoint3">Designed for English-first and bilingual job seekers across US, UK, EU, APAC, and remote markets</li>
-          </ul>
+          <div class="positioning-strip simple-steps" aria-label="product positioning">
+            <article>
+              <span>01</span>
+              <strong data-i18n="homeStep1">Paste your rough experience</strong>
+            </article>
+            <article>
+              <span>02</span>
+              <strong data-i18n="homeStep2">Add the target role or JD</strong>
+            </article>
+            <article>
+              <span>03</span>
+              <strong data-i18n="homeStep3">Get a better resume version</strong>
+            </article>
+          </div>
         </div>
 
-        <div class="hero-panel">
-          <div class="signal-card">
-            <p class="signal-label" data-i18n="heroPanelLabel">Product signals</p>
-            <div class="signal-grid">
+        <aside class="hero-panel">
+          <div class="simple-start-card" data-tilt-card>
+            <p class="panel-label" data-i18n="homeCardKicker">Today's mission</p>
+            <h2 data-i18n="homeCardTitle">Make one resume good enough to send.</h2>
+            <p data-i18n="homeCardBody">No account setup. No complicated dashboard first. Start with the material you already have.</p>
+            <div class="flow-list">
               <article>
-                <strong>92%</strong>
-                <span data-i18n="signal1">JD alignment target</span>
+                <span data-i18n="homeInputLabel">Input</span>
+                <strong data-i18n="homeInputValue">rough experience + target role</strong>
               </article>
               <article>
-                <strong>3</strong>
-                <span data-i18n="signal2">Output layers</span>
-              </article>
-              <article>
-                <strong>5</strong>
-                <span data-i18n="signal3">Hiring markets</span>
-              </article>
-              <article>
-                <strong>∞</strong>
-                <span data-i18n="signal4">Preference memory</span>
+                <span data-i18n="homeOutputLabel">Output</span>
+                <strong data-i18n="homeOutputValue">diagnosis + rewrite + resume file</strong>
               </article>
             </div>
+            <div class="hero-mini-proof">
+              <span data-i18n="homeProofLabel">Best first use case</span>
+              <strong data-i18n="homeProofValue">Help me polish my own resume today</strong>
+            </div>
           </div>
-
-          <div class="preview-card">
-            <p class="preview-label" data-i18n="previewLabel">What the product returns</p>
-            <ol>
-              <li data-i18n="preview1">Positioning diagnosis with role-fit risks</li>
-              <li data-i18n="preview2">Keyword match summary against the JD</li>
-              <li data-i18n="preview3">Optimized resume draft with stronger bullets</li>
-              <li data-i18n="preview4">Layout recommendation for one-page or two-page delivery</li>
-            </ol>
-          </div>
-        </div>
+        </aside>
       </section>
 
-      <section class="section" id="product">
-        <div class="section-heading">
-          <p class="eyebrow" data-i18n="productEyebrow">Product shape</p>
-          <h2 data-i18n="productTitle">A vertical AI product, not a general framework.</h2>
-          <p data-i18n="productBody">
-            The experience is now organized around resume outcomes: diagnose, tailor, optimize, format, and export.
-          </p>
-        </div>
-
-        <div class="feature-grid">
-          <article class="feature-card">
-            <span class="feature-kicker" data-i18n="feature1Kicker">Diagnosis</span>
-            <h3 data-i18n="feature1Title">Resume health audit</h3>
-            <p data-i18n="feature1Body">Find weak summaries, vague bullets, missing metrics, and under-positioned projects before recruiters do.</p>
-          </article>
-          <article class="feature-card">
-            <span class="feature-kicker" data-i18n="feature2Kicker">Tailoring</span>
-            <h3 data-i18n="feature2Title">JD-aware adaptation</h3>
-            <p data-i18n="feature2Body">Map your experience to role requirements, surface missing keywords, and prioritize the most relevant evidence.</p>
-          </article>
-          <article class="feature-card">
-            <span class="feature-kicker" data-i18n="feature3Kicker">Optimization</span>
-            <h3 data-i18n="feature3Title">Content rewriting</h3>
-            <p data-i18n="feature3Body">Rewrite bullets for clarity, impact, and recruiter readability without flattening your real story.</p>
-          </article>
-          <article class="feature-card">
-            <span class="feature-kicker" data-i18n="feature4Kicker">Delivery</span>
-            <h3 data-i18n="feature4Title">Layout and export</h3>
-            <p data-i18n="feature4Body">Choose templates, optimize pagination, and prepare polished outputs for direct submission.</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="section workflow" id="workflow">
-        <div class="section-heading">
-          <p class="eyebrow" data-i18n="workflowEyebrow">Workflow</p>
-          <h2 data-i18n="workflowTitle">A hiring-facing workflow with product logic baked in.</h2>
-        </div>
-
-        <div class="workflow-rail">
-          <article class="workflow-step">
-            <span>01</span>
-            <h3 data-i18n="step1Title">Diagnose</h3>
-            <p data-i18n="step1Body">Audit summary, experience, projects, skills, and evidence density.</p>
-          </article>
-          <article class="workflow-step">
-            <span>02</span>
-            <h3 data-i18n="step2Title">Tailor</h3>
-            <p data-i18n="step2Body">Compare the resume against a target JD and reshape emphasis for the target role.</p>
-          </article>
-          <article class="workflow-step">
-            <span>03</span>
-            <h3 data-i18n="step3Title">Strengthen</h3>
-            <p data-i18n="step3Body">Rewrite bullets, add metrics, and tighten phrasing for stronger recruiter scan value.</p>
-          </article>
-          <article class="workflow-step">
-            <span>04</span>
-            <h3 data-i18n="step4Title">Format</h3>
-            <p data-i18n="step4Body">Apply market-appropriate layout, typography, and page-length strategy.</p>
-          </article>
-          <article class="workflow-step">
-            <span>05</span>
-            <h3 data-i18n="step5Title">Remember</h3>
-            <p data-i18n="step5Body">Store user preferences and successful patterns for future applications.</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="section studio" id="studio">
-        <div class="section-heading">
-          <p class="eyebrow" data-i18n="studioEyebrow">Product studio</p>
-          <h2 data-i18n="studioTitle">Prototype the end-user experience.</h2>
-          <p data-i18n="studioBody">
-            This studio models how Resume Copilot can frame recommendations for different hiring markets and user intents.
-          </p>
-        </div>
-
-        <div class="studio-layout">
-          <form class="studio-form" id="resumeStudioForm">
-            <div class="field-row">
-              <label>
-                <span data-i18n="fieldMarket">Target market</span>
-                <select id="marketSelect">
-                  <option value="us">United States</option>
-                  <option value="uk">United Kingdom</option>
-                  <option value="eu">European Union</option>
-                  <option value="apac">APAC</option>
-                  <option value="remote">Remote-first</option>
-                </select>
-              </label>
-              <label>
-                <span data-i18n="fieldTone">Voice preference</span>
-                <select id="toneSelect">
-                  <option value="precise">Precise and concise</option>
-                  <option value="confident">Confident and executive</option>
-                  <option value="technical">Technical and evidence-led</option>
-                </select>
-              </label>
+      <section class="section lab-section app-page" id="quest" data-page="quest">
+        <div class="atelier-orb orb-ink" aria-hidden="true"></div>
+        <div class="atelier-orb orb-red" aria-hidden="true"></div>
+        <div class="lab-grid">
+          <form class="control-panel resume-input-panel" id="resumeWorkbenchForm">
+            <div class="control-head">
+              <p class="card-kicker" data-i18n="workbenchInput">Workbench Input</p>
+              <span class="status-badge" data-i18n="liveStatus">live</span>
             </div>
 
-            <label>
+            <div class="resume-quest" id="resumeQuest">
+              <div class="quest-topline">
+                <span class="quest-badge" id="questBadge">1 / 3</span>
+                <div class="quest-progress" aria-hidden="true"><span id="questProgress"></span></div>
+              </div>
+              <p class="card-kicker" data-i18n="questKicker">Resume Quest</p>
+              <label class="quest-discipline">
+                <span data-i18n="questDiscipline">Choose your discipline</span>
+                <select id="questDisciplineSelect">
+                  <option value="engineering" data-i18n="disciplineEngineering">Engineering / CS</option>
+                  <option value="business" data-i18n="disciplineBusiness">Business / Operations</option>
+                  <option value="design" data-i18n="disciplineDesign">Design / Media</option>
+                  <option value="humanities" data-i18n="disciplineHumanities">Humanities / Social Science</option>
+                  <option value="education" data-i18n="disciplineEducation">Education / Social Impact</option>
+                  <option value="research" data-i18n="disciplineResearch">Research / Graduate School</option>
+                </select>
+              </label>
+              <label class="quest-discipline">
+                <span data-i18n="templateSelectLabel">Choose a resume template</span>
+                <select id="templateSelect">
+                  <option value="fresh_graduate" data-i18n="templateFreshGraduate">Fresh graduate</option>
+                  <option value="tech_modern" data-i18n="templateTechModern">Tech modern</option>
+                  <option value="minimal" data-i18n="templateMinimal">Minimal</option>
+                  <option value="management" data-i18n="templateManagement">Management</option>
+                </select>
+              </label>
+              <div class="quest-module-plan" id="questModulePlan" aria-label="Resume module plan"></div>
+              <h3 id="questTitle">Choose your target</h3>
+              <p id="questPrompt">Tell me the job you want. Keep it simple.</p>
+              <textarea id="questAnswer" rows="4"></textarea>
+              <div class="quest-chips" id="questChips"></div>
+              <div class="quest-actions">
+                <button class="button button-ghost" id="questPrevButton" type="button" data-i18n="questBack">Back</button>
+                <button class="button button-secondary" id="questNextButton" type="button" data-i18n="questNext">Next</button>
+                <button class="button button-primary" id="questRunButton" type="button" data-i18n="questRun">Generate resume</button>
+              </div>
+            </div>
+
+            <details class="manual-editor">
+              <summary data-i18n="manualEditor">Review or fine-tune source material</summary>
+
+            <label class="studio-field field-role">
               <span data-i18n="fieldRole">Target role</span>
-              <input id="roleInput" type="text" value="Senior Backend Engineer" />
+              <input id="roleInput" type="text" value="Senior Backend Engineer">
+              <small class="field-note" data-i18n="fieldExactRoleNote">Use the exact role title you want this version to win.</small>
             </label>
 
-            <label>
+            <label class="studio-field field-material">
               <span data-i18n="fieldResume">Resume snapshot</span>
-              <textarea id="resumeInput" rows="8">Built Python services for internal analytics, maintained APIs, improved deployment reliability, and worked with product teams.</textarea>
+              <textarea id="resumeInput" rows="10">Built Python services for analytics workflows.
+Improved release reliability and collaborated with product managers.
+Maintained APIs and deployment pipelines.</textarea>
+              <small class="field-note" data-i18n="fieldResumeNote">Paste raw bullets, rough notes, or half-finished resume content. The system is designed to work from imperfect input.</small>
             </label>
 
-            <label>
+            <label class="studio-field field-jd">
               <span data-i18n="fieldJd">Job description excerpt</span>
-              <textarea id="jdInput" rows="8">Looking for a backend engineer who can design distributed systems, improve reliability, communicate with stakeholders, and mentor teammates.</textarea>
+              <textarea id="jdInput" rows="10">Looking for a backend engineer who can design distributed systems, improve reliability, communicate with stakeholders, and mentor teammates.</textarea>
+              <small class="field-note" data-i18n="fieldJdNote">Include the lines that reveal hiring signals, stack requirements, and evaluation criteria.</small>
             </label>
 
-            <button class="button button-primary full-width" type="submit" data-i18n="runPreview">Generate product preview</button>
+            <details class="advanced-options">
+              <summary data-i18n="advancedSettings">Advanced settings</summary>
+              <div class="field-row">
+                <label>
+                  <span data-i18n="fieldMarket">Target market</span>
+                  <select id="marketSelect">
+                    <option value="us" data-i18n="marketUs">United States</option>
+                    <option value="uk" data-i18n="marketUk">United Kingdom</option>
+                    <option value="eu" data-i18n="marketEu">European Union</option>
+                    <option value="apac" data-i18n="marketApac">APAC</option>
+                    <option value="remote" data-i18n="marketRemote">Remote-first</option>
+                  </select>
+                </label>
+                <label>
+                  <span data-i18n="fieldTone">Voice preference</span>
+                  <select id="toneSelect">
+                    <option value="precise" data-i18n="tonePrecise">Precise</option>
+                    <option value="confident" data-i18n="toneConfident">Confident</option>
+                    <option value="technical" data-i18n="toneTechnical">Technical</option>
+                  </select>
+                </label>
+              </div>
+            </details>
+            </details>
+
+            <div class="button-row">
+              <button class="button button-primary" type="submit" data-i18n="runPreview">Run workbench</button>
+              <button class="button button-secondary" id="saveWorkbenchVersionButton" type="button" data-i18n="saveWorkbenchVersion">Save as version</button>
+              <select class="format-select" id="outputFormatSelect" aria-label="Output format">
+                <option value="latex" data-i18n="formatLatex">LaTeX .tex</option>
+                <option value="docx" data-i18n="formatDocx">Word .docx</option>
+              </select>
+              <button class="button button-secondary" id="generateWorkbenchDocumentButton" type="button" data-i18n="generateWorkbenchDocument">Generate resume file</button>
+              <button class="button button-ghost" id="loadSampleButton" type="button" data-i18n="loadSample">Load sample</button>
+            </div>
           </form>
 
-          <aside class="studio-output" id="studioOutput" aria-live="polite">
-            <div class="output-card">
-              <p class="output-kicker" data-i18n="outputKicker">Preview</p>
-              <h3 data-i18n="outputTitle">Your recommendations will appear here.</h3>
-              <p data-i18n="outputBody">Use the studio to simulate diagnosis, market positioning, and memory-backed preference guidance.</p>
+          <aside class="workbench-output is-empty" id="studioOutput" aria-live="polite">
+            <div class="workbench-grid">
+              <section class="surface-card wide-card live-preview-card">
+                <p class="card-kicker" data-i18n="livePreview">Live Resume Preview</p>
+                <div class="preview-sheet" id="previewSheet">
+                  <div class="preview-head">
+                    <div>
+                      <span data-i18n="previewTarget">Target</span>
+                      <strong id="previewRole">--</strong>
+                    </div>
+                    <em id="previewTemplate">Fresh graduate</em>
+                  </div>
+                  <div class="preview-modules" id="previewModules"></div>
+                </div>
+              </section>
+
+              <section class="surface-card wide-card detail-card delivery-card">
+                <p class="card-kicker" data-i18n="generationResult">Generation Result</p>
+                <div id="generationResult" class="delivery-result"></div>
+              </section>
+
+              <section class="surface-card command-card">
+                <p class="card-kicker" data-i18n="aiOptimization">AI Optimization</p>
+                <pre id="commandLog">&gt; waiting.for_input</pre>
+              </section>
+
+              <section class="surface-card score-card">
+                <p class="card-kicker" data-i18n="signalMatrix">Signal Matrix</p>
+                <div id="scoreMatrix" class="score-matrix">
+                  <article><span data-i18n="metricJdMatch">JD Match</span><strong>--</strong></article>
+                  <article><span data-i18n="metricEvidence">Evidence</span><strong>--</strong></article>
+                  <article><span data-i18n="metricReadability">Readability</span><strong>--</strong></article>
+                  <article><span data-i18n="metricAtsSafety">ATS Safety</span><strong>--</strong></article>
+                </div>
+              </section>
+
+              <section class="surface-card wide-card detail-card">
+                <p class="card-kicker" data-i18n="diagnosis">Diagnosis</p>
+                <div id="diagnosisList" class="stack-list"></div>
+              </section>
+
+              <section class="surface-card detail-card">
+                <p class="card-kicker" data-i18n="keywordStack">Keyword Stack</p>
+                <div class="token-zone">
+                  <div>
+                    <span class="token-label" data-i18n="matchedKeywords">Matched</span>
+                    <div id="matchedKeywords" class="token-row"></div>
+                  </div>
+                  <div>
+                    <span class="token-label" data-i18n="missingKeywords">Missing</span>
+                    <div id="missingKeywords" class="token-row"></div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="surface-card detail-card">
+                <p class="card-kicker" data-i18n="focusAreas">Focus Areas</p>
+                <div id="focusAreaList" class="stack-list"></div>
+              </section>
+
+              <section class="surface-card wide-card detail-card">
+                <p class="card-kicker" data-i18n="rewriteCandidates">Rewrite Candidates</p>
+                <div id="rewriteCandidateList" class="rewrite-list"></div>
+              </section>
+
+              <section class="surface-card wide-card detail-card">
+                <p class="card-kicker" data-i18n="nextActions">Next Actions</p>
+                <div id="nextActionList" class="stack-list"></div>
+              </section>
+
+              <section class="surface-card wide-card detail-card">
+                <p class="card-kicker" data-i18n="generationPlan">Generation Plan</p>
+                <div id="generationPlan" class="stack-list"></div>
+              </section>
+
             </div>
           </aside>
         </div>
       </section>
 
-      <section class="section regions" id="regions">
+      <section class="section workspace-section app-page" id="workspace" data-page="workspace">
         <div class="section-heading">
-          <p class="eyebrow" data-i18n="regionsEyebrow">International view</p>
-          <h2 data-i18n="regionsTitle">Designed with global hiring norms in mind.</h2>
+          <p class="eyebrow" data-i18n="dashboardEyebrow">Workspace</p>
+          <h2 data-i18n="dashboardTitle">One candidate, one operating console.</h2>
+          <p data-i18n="dashboardBody">
+            The workspace keeps profile, target markets, resume versions, opportunities, applications, interview prep, and memory in one place so the product can evolve beyond one-shot generation.
+          </p>
         </div>
 
-        <div class="region-grid">
-          <article>
-            <h3>US / Canada</h3>
-            <p data-i18n="regionUs">Focus on quantified impact, ownership, systems scale, and concise one-page or tight two-page delivery.</p>
-          </article>
-          <article>
-            <h3>UK / EU</h3>
-            <p data-i18n="regionUk">Balance achievements with role scope, team context, and clarity across multinational recruiting processes.</p>
-          </article>
-          <article>
-            <h3>APAC</h3>
-            <p data-i18n="regionApac">Support bilingual nuance, stronger structure, and market-specific emphasis on education, projects, and stability signals.</p>
-          </article>
-          <article>
-            <h3>Remote</h3>
-            <p data-i18n="regionRemote">Highlight async communication, documentation quality, timezone collaboration, and cross-functional execution.</p>
-          </article>
+        <div class="workspace-hero surface-card">
+          <div>
+            <p class="card-kicker" data-i18n="workspaceKicker">Candidate</p>
+            <h3 id="workspaceTitle">Primary Candidate</h3>
+            <p id="workspaceNorthStar">Loading product direction...</p>
+          </div>
+          <div class="chip-row" id="workspaceMarkets"></div>
+        </div>
+
+        <div class="dashboard-grid">
+          <section class="surface-card">
+            <p class="card-kicker" data-i18n="modulesKicker">Modules</p>
+            <div id="moduleList" class="stack-list"></div>
+          </section>
+          <section class="surface-card">
+            <p class="card-kicker" data-i18n="targetsKicker">Targets</p>
+            <div id="targetList" class="stack-list"></div>
+          </section>
+          <section class="surface-card">
+            <p class="card-kicker" data-i18n="resumeVersionsKicker">Resume versions</p>
+            <div id="resumeVersionList" class="stack-list"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="section signals-section app-page" id="signals" data-page="workspace">
+        <div class="section-heading">
+          <p class="eyebrow" data-i18n="operationsEyebrow">Signals</p>
+          <h2 data-i18n="operationsTitle">Update the candidate state with a few high-leverage operations.</h2>
+          <p data-i18n="operationsBody">
+            Keep the input surface small: profile, targets, resume versions, and applications. The product should feel intentional, not bloated.
+          </p>
+        </div>
+
+        <div class="operations-grid">
+          <form class="surface-card ops-form" id="rawIntakeForm">
+            <p class="card-kicker" data-i18n="rawIntake">Raw intake</p>
+            <p class="section-copy" data-i18n="rawIntakeCopy">Turn messy campus material into a first structured master draft.</p>
+            <label>
+              <span data-i18n="education">Education</span>
+              <input id="intakeEducation" type="text" placeholder="Tsinghua University" data-i18n-placeholder="placeholderEducation">
+            </label>
+            <label>
+              <span data-i18n="major">Major</span>
+              <input id="intakeMajor" type="text" placeholder="Computer Science" data-i18n-placeholder="placeholderMajor">
+            </label>
+            <label>
+              <span data-i18n="graduationCycle">Graduation cycle</span>
+              <input id="intakeGraduationCycle" type="text" placeholder="2026" data-i18n-placeholder="placeholderGraduation">
+            </label>
+            <label>
+              <span data-i18n="messyRawMaterials">Messy raw materials</span>
+              <textarea id="intakeRawText" rows="8">Competition: ACM contest finalist.
+Course project: built a campus mini app with Python backend.
+Student club: organized a recruiting event for 300 participants.</textarea>
+              <small class="field-note" data-i18n="rawIntakeNote">Dump competitions, clubs, project notes, half-written bullets, or anything worth packaging.</small>
+            </label>
+            <button class="button button-primary full-width" type="submit" data-i18n="createFirstDraft">Create first draft</button>
+          </form>
+
+          <form class="surface-card ops-form" id="profileForm">
+            <p class="card-kicker" data-i18n="profileFormKicker">Profile</p>
+            <label>
+              <span data-i18n="fieldFullName">Full name</span>
+              <input id="profileFullName" type="text" placeholder="Jane Candidate" data-i18n-placeholder="placeholderFullName">
+            </label>
+            <label>
+              <span data-i18n="fieldTargetTitle">Primary target role</span>
+              <input id="profileTargetTitle" type="text" placeholder="Senior Backend Engineer" data-i18n-placeholder="placeholderTargetTitle">
+            </label>
+            <label>
+              <span data-i18n="fieldTargetMarkets">Target markets</span>
+              <input id="profileTargetMarkets" type="text" placeholder="US, UK, Remote" data-i18n-placeholder="placeholderTargetMarkets">
+            </label>
+            <label>
+              <span data-i18n="fieldStrengths">Top strengths</span>
+              <input id="profileStrengths" type="text" placeholder="Distributed systems, Python, mentorship" data-i18n-placeholder="placeholderStrengths">
+            </label>
+            <button class="button button-primary full-width" type="submit" data-i18n="saveProfile">Save profile</button>
+          </form>
+
+          <form class="surface-card ops-form" id="targetForm">
+            <p class="card-kicker" data-i18n="targetFormKicker">Targeting</p>
+            <label>
+              <span data-i18n="fieldTargetRole">Role title</span>
+              <input id="targetTitle" type="text" placeholder="Platform Engineer" data-i18n-placeholder="placeholderTargetRole">
+            </label>
+            <label>
+              <span data-i18n="fieldTargetMarket">Market</span>
+              <input id="targetMarket" type="text" placeholder="Remote" data-i18n-placeholder="placeholderTargetMarket">
+            </label>
+            <label>
+              <span data-i18n="fieldSeniority">Seniority</span>
+              <input id="targetSeniority" type="text" placeholder="Senior IC" data-i18n-placeholder="placeholderSeniority">
+            </label>
+            <label>
+              <span data-i18n="fieldPriorities">Priorities</span>
+              <input id="targetPriorities" type="text" placeholder="Scale, reliability, async collaboration" data-i18n-placeholder="placeholderPriorities">
+            </label>
+            <button class="button button-primary full-width" type="submit" data-i18n="addTarget">Add target</button>
+          </form>
+
+          <form class="surface-card ops-form" id="resumeVersionForm">
+            <p class="card-kicker" data-i18n="resumeVersionFormKicker">Resume ops</p>
+            <label>
+              <span data-i18n="fieldResumeLabel">Version label</span>
+              <input id="resumeVersionLabel" type="text" placeholder="US backend tailored v2" data-i18n-placeholder="placeholderResumeLabel">
+            </label>
+            <label>
+              <span data-i18n="fieldResumeStatus">Status</span>
+              <input id="resumeVersionStatus" type="text" placeholder="Ready" data-i18n-placeholder="placeholderResumeStatus">
+            </label>
+            <label>
+              <span data-i18n="fieldResumeFocus">Focus</span>
+              <input id="resumeVersionFocus" type="text" placeholder="Python, distributed systems, mentoring" data-i18n-placeholder="placeholderResumeFocus">
+            </label>
+            <label>
+              <span data-i18n="fieldResumeMarket">Market</span>
+              <input id="resumeVersionMarket" type="text" placeholder="US" data-i18n-placeholder="placeholderResumeMarket">
+            </label>
+            <button class="button button-primary full-width" type="submit" data-i18n="addResumeVersion">Add resume version</button>
+          </form>
+
+          <form class="surface-card ops-form" id="applicationForm">
+            <p class="card-kicker" data-i18n="applicationFormKicker">Applications</p>
+            <label>
+              <span data-i18n="fieldCompany">Company</span>
+              <input id="applicationCompany" type="text" placeholder="Atlas Cloud" data-i18n-placeholder="placeholderApplicationCompany">
+            </label>
+            <label>
+              <span data-i18n="fieldApplicationRole">Role</span>
+              <input id="applicationRole" type="text" placeholder="Senior Backend Engineer" data-i18n-placeholder="placeholderApplicationRole">
+            </label>
+            <label>
+              <span data-i18n="fieldApplicationStage">Stage</span>
+              <input id="applicationStage" type="text" placeholder="Tailoring" data-i18n-placeholder="placeholderApplicationStage">
+            </label>
+            <label>
+              <span data-i18n="fieldNextStep">Next step</span>
+              <input id="applicationNextStep" type="text" placeholder="Finalize resume and submit" data-i18n-placeholder="placeholderApplicationNextStep">
+            </label>
+            <button class="button button-primary full-width" type="submit" data-i18n="trackApplication">Track application</button>
+          </form>
+
+          <form class="surface-card ops-form" id="applicationFeedbackForm">
+            <p class="card-kicker" data-i18n="feedbackLoop">Feedback loop</p>
+            <label>
+              <span data-i18n="fieldCompany">Company</span>
+              <input id="feedbackCompany" type="text" placeholder="Atlas Cloud" data-i18n-placeholder="placeholderFeedbackCompany">
+            </label>
+            <label>
+              <span data-i18n="fieldApplicationRole">Role</span>
+              <input id="feedbackRole" type="text" placeholder="Senior Backend Engineer" data-i18n-placeholder="placeholderFeedbackRole">
+            </label>
+            <label>
+              <span data-i18n="result">Result</span>
+              <input id="feedbackResult" type="text" placeholder="Interview / Rejected / Offer" data-i18n-placeholder="placeholderFeedbackResult">
+            </label>
+            <label>
+              <span data-i18n="notes">Notes</span>
+              <textarea id="feedbackNotes" rows="5" placeholder="Rejected due to weaker system design depth." data-i18n-placeholder="placeholderFeedbackNotes"></textarea>
+            </label>
+            <button class="button button-primary full-width" type="submit" data-i18n="recordFeedback">Record feedback</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="section opportunities-section app-page" id="opportunities" data-page="opportunities">
+        <div class="section-heading">
+          <p class="eyebrow" data-i18n="opportunitiesEyebrow">Opportunities</p>
+          <h2 data-i18n="opportunitiesTitle">Import a role and decide whether it deserves energy.</h2>
+          <p data-i18n="opportunitiesBody">
+            Opportunity Agent scores fit, shows risk, suggests the best resume version, and lets the user convert promising roles into tracked applications.
+          </p>
+        </div>
+
+        <div class="lab-grid">
+          <form class="surface-card ops-form" id="opportunityForm">
+            <p class="card-kicker" data-i18n="opportunityFormKicker">Import opportunity</p>
+            <label>
+              <span data-i18n="fieldOpportunityCompany">Company</span>
+              <input id="opportunityCompany" type="text" placeholder="Signal Stack" data-i18n-placeholder="placeholderOpportunityCompany">
+            </label>
+            <label>
+              <span data-i18n="fieldOpportunityTitle">Role title</span>
+              <input id="opportunityTitle" type="text" placeholder="Senior Backend Engineer" data-i18n-placeholder="placeholderOpportunityTitle">
+            </label>
+            <div class="field-row">
+              <label>
+                <span data-i18n="fieldOpportunityMarket">Market</span>
+                <input id="opportunityMarket" type="text" placeholder="US" data-i18n-placeholder="placeholderOpportunityMarket">
+              </label>
+              <label>
+                <span data-i18n="fieldOpportunityLocation">Location</span>
+                <input id="opportunityLocation" type="text" placeholder="Remote / US" data-i18n-placeholder="placeholderOpportunityLocation">
+              </label>
+            </div>
+            <label>
+              <span data-i18n="fieldOpportunitySource">Source</span>
+              <input id="opportunitySource" type="text" placeholder="LinkedIn import" data-i18n-placeholder="placeholderOpportunitySource">
+            </label>
+            <label>
+              <span data-i18n="fieldOpportunityDescription">Job description</span>
+              <textarea id="opportunityDescription" rows="9"></textarea>
+            </label>
+            <button class="button button-primary full-width" type="submit" data-i18n="scoreOpportunity">Score opportunity</button>
+            <label>
+              <span data-i18n="batchOpportunities">Batch opportunities</span>
+              <textarea id="batchOpportunityInput" rows="7" placeholder='[{"company":"Orbit Works","title":"Platform Engineer","market":"US","location":"Remote / US","description":"Python platform role with reliability and ownership."}]' data-i18n-placeholder="placeholderBatchOpportunity"></textarea>
+            </label>
+            <button class="button button-secondary full-width" id="batchOpportunityButton" type="button" data-i18n="runBatchRanking">Run batch ranking</button>
+          </form>
+
+          <aside class="surface-card">
+            <p class="card-kicker" data-i18n="opportunityListKicker">Recommended opportunities</p>
+            <p class="section-copy" data-i18n="opportunityListCopy">Score what deserves attention, then convert only the strongest matches into action.</p>
+            <div id="opportunityBoard" class="output-stack"></div>
+            <div id="opportunityList" class="stack-list compact-stack"></div>
+          </aside>
         </div>
       </section>
     </main>
+    <div class="data-sink" aria-hidden="true">
+      <div id="applicationList"></div>
+      <div id="interviewList"></div>
+      <div id="memoryList"></div>
+    </div>
   </div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=20260514-coach-panel"></script>
 </body>
 </html>

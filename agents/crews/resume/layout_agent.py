@@ -14,6 +14,7 @@ import json
 
 from agents.base import BaseLLMAgent, AgentResult, LLMProtocol
 from common.logger import get_logger
+from resume_copilot.domain import normalize_resume_data
 from prompts.layout import (
     LAYOUT_AGENT_SYSTEM_PROMPT,
     LAYOUT_THINK_PROMPT,
@@ -123,8 +124,9 @@ class LayoutAgent(BaseLLMAgent):
     def _get_default_config(self, resume_data: Dict[str, Any]) -> Dict[str, Any]:
         """根据简历内容生成默认配置"""
         # 判断职业阶段
-        experiences = resume_data.get("experiences", [])
-        education = resume_data.get("education", [])
+        normalized_resume = normalize_resume_data(resume_data)
+        experiences = normalized_resume.get("experience", [])
+        education = normalized_resume.get("education", [])
         
         is_fresh_grad = len(experiences) == 0 or (
             len(experiences) == 1 and "实习" in str(experiences)
@@ -179,12 +181,12 @@ class LayoutAgent(BaseLLMAgent):
         max_proj = limits.get("max_projects", 3)
         max_highlights = limits.get("max_highlights_per_item", 4)
         
-        trimmed = resume_data.copy()
+        trimmed = normalize_resume_data(resume_data.copy())
         
         # 精简经历
-        if "experiences" in trimmed:
-            trimmed["experiences"] = trimmed["experiences"][:max_exp]
-            for exp in trimmed["experiences"]:
+        if "experience" in trimmed:
+            trimmed["experience"] = trimmed["experience"][:max_exp]
+            for exp in trimmed["experience"]:
                 if "highlights" in exp:
                     exp["highlights"] = exp["highlights"][:max_highlights]
         

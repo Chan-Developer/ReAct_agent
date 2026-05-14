@@ -8,6 +8,8 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from resume_copilot.domain import normalize_resume_data
+
 
 ACTION_VERBS = {
     "built",
@@ -58,6 +60,48 @@ STOPWORDS = {
     "work",
 }
 
+TECH_KEYWORD_ALIASES = {
+    "python/java/c++": ["python", "java", "c++"],
+    "go/golang": ["go", "golang"],
+}
+
+CHINESE_KEYWORDS = [
+    "后端",
+    "项目经验",
+    "系统设计",
+    "计算机基础",
+    "数据库",
+    "缓存",
+    "消息队列",
+    "稳定性",
+    "沟通",
+    "学习能力",
+    "工程化",
+    "算法",
+    "数据结构",
+    "实习",
+    "校招",
+]
+
+# Keep Chinese product signals ASCII-safe so PowerShell/codepage issues do not corrupt them.
+CHINESE_KEYWORDS = [
+    "\u540e\u7aef",
+    "\u9879\u76ee\u7ecf\u9a8c",
+    "\u7cfb\u7edf\u8bbe\u8ba1",
+    "\u8ba1\u7b97\u673a\u57fa\u7840",
+    "\u6570\u636e\u5e93",
+    "\u7f13\u5b58",
+    "\u6d88\u606f\u961f\u5217",
+    "\u7a33\u5b9a\u6027",
+    "\u6c9f\u901a",
+    "\u5b66\u4e60\u80fd\u529b",
+    "\u5de5\u7a0b\u5316",
+    "\u7b97\u6cd5",
+    "\u6570\u636e\u7ed3\u6784",
+    "\u5b9e\u4e60",
+    "\u6821\u62db",
+]
+
 
 @dataclass
 class ResumeMetricResult:
@@ -85,14 +129,8 @@ class ResumeMetricResult:
         }
 
 
-def _normalize_resume_data(resume_data: dict[str, Any]) -> dict[str, Any]:
-    if "experiences" in resume_data and "experience" not in resume_data:
-        resume_data = {**resume_data, "experience": resume_data["experiences"]}
-    return resume_data
-
-
 def _extract_resume_lines(resume_data: dict[str, Any]) -> list[str]:
-    resume_data = _normalize_resume_data(resume_data)
+    resume_data = normalize_resume_data(resume_data)
     lines: list[str] = []
 
     summary = resume_data.get("summary")
@@ -124,12 +162,16 @@ def _extract_keywords(text: str) -> list[str]:
     for token in re.findall(r"[A-Za-z][A-Za-z0-9\+\#\.\-/]{2,}", text.lower()):
         if token in STOPWORDS:
             continue
-        if token not in seen:
-            seen.append(token)
+        for normalized in TECH_KEYWORD_ALIASES.get(token, [token]):
+            if normalized not in seen:
+                seen.append(normalized)
+    for keyword in CHINESE_KEYWORDS:
+        if keyword in text and keyword not in seen:
+            seen.append(keyword)
     return seen
 
 
-def _extract_jd_keywords(job_description: str, max_keywords: int = 20) -> list[str]:
+def extract_jd_keywords(job_description: str, max_keywords: int = 20) -> list[str]:
     keywords = _extract_keywords(job_description)
     priority = [
         kw
@@ -162,8 +204,8 @@ def _score_keyword_match(resume_text: str, keywords: list[str]) -> tuple[float, 
         return 0.0, [], []
 
     lowered = resume_text.lower()
-    matched = [kw for kw in keywords if kw in lowered]
-    missing = [kw for kw in keywords if kw not in lowered]
+    matched = [kw for kw in keywords if kw.lower() in lowered or kw in resume_text]
+    missing = [kw for kw in keywords if kw not in matched]
     score = (len(matched) / len(keywords)) * 100
     return score, matched, missing
 
@@ -193,7 +235,7 @@ def _score_readability(lines: list[str]) -> float:
 
 
 def _score_ats_safety(resume_data: dict[str, Any]) -> tuple[float, list[str]]:
-    resume_data = _normalize_resume_data(resume_data)
+    resume_data = normalize_resume_data(resume_data)
     notes: list[str] = []
     score = 100.0
 
@@ -223,11 +265,11 @@ def score_resume_against_jd(
     resume_data: dict[str, Any],
     job_description: str,
 ) -> ResumeMetricResult:
-    resume_data = _normalize_resume_data(resume_data)
+    resume_data = normalize_resume_data(resume_data)
     lines = _extract_resume_lines(resume_data)
     resume_text = "\n".join(lines)
 
-    jd_keywords = _extract_jd_keywords(job_description)
+    jd_keywords = extract_jd_keywords(job_description)
     jd_match_score, matched, missing = _score_keyword_match(resume_text, jd_keywords)
     quantified_score = _score_quantified_evidence(lines)
     readability_score = _score_readability(lines)
